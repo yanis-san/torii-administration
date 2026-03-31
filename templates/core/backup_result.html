@@ -1,5 +1,5 @@
 <!-- Template du résultat final de la sauvegarde -->
-<div hx-target="this" hx-swap="outerHTML" class="fixed bottom-4 right-4 bg-white rounded-lg shadow-xl p-6 w-96 z-50">
+<div hx-target="this" hx-swap="outerHTML" class="fixed bottom-4 right-4 bg-white rounded-lg shadow-xl p-6 w-96 z-50 backup-toast" data-backup-auto-dismiss="{% if backup_state.status == 'completed' %}true{% else %}false{% endif %}">
     {% if backup_state.status == 'completed' %}
         <!-- Succès -->
         <h3 class="text-lg font-semibold text-green-600 mb-4">✅ Sauvegarde Complète</h3>
@@ -63,33 +63,3 @@
     {% endif %}
 </div>
 
-<!-- Script pour auto-dismiss -->
-<script>
-    document.addEventListener('htmx:afterSettle', function(evt) {
-        // Si la sauvegarde est complétée, disparaître après 8 secondes
-        if (document.querySelector('.bg-green-50')) {
-            setTimeout(() => {
-                const elem = document.querySelector('[hx-swap="outerHTML"]');
-                if (elem) elem.remove();
-            }, 8000);
-        }
-    });
-</script>
-
-<style>
-    /* Animation fade-in */
-    @keyframes fadeIn {
-        from {
-            opacity: 0;
-            transform: translateY(10px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-    
-    .fixed {
-        animation: fadeIn 0.3s ease-out;
-    }
-</style>

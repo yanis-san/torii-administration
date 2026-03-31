@@ -31,6 +31,27 @@
         </div>
     </div>
 
+    <!-- Accès rapide : Certificats -->
+    <div class="bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-300 rounded-xl overflow-hidden shadow-sm">
+        <div class="bg-gradient-to-r from-amber-500 to-orange-600 px-6 py-3">
+            <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path>
+                </svg>
+                🏆 Certificats de Fin de Niveau
+            </h2>
+        </div>
+        <div class="p-6 space-y-3">
+            <p class="text-sm text-gray-700">
+                Générez des certificats personnalisés pour vos étudiants de <strong>Chinois</strong>, <strong>Coréen</strong> et <strong>Japonais</strong> 
+                (critère: &gt;50% de présence aux séances validées).
+            </p>
+            <a href="{% url 'certificate:cohort_list' %}" class="inline-block bg-amber-500 hover:bg-amber-600 text-white px-6 py-2 rounded-lg font-semibold transition shadow-sm">
+                Générer des certificats →
+            </a>
+        </div>
+    </div>
+
     <!-- Onglets -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-200">
         <div class="flex flex-wrap gap-2 p-2 border-b border-gray-200">
@@ -147,7 +168,7 @@
                             <option value="{% url 'reports:cohort_students' cohort.id %}">{{ cohort.name }} - {{ cohort.subject.name }}</option>
                             {% endfor %}
                         </select>
-                        <button type="button" onclick="window.open(document.getElementById('cohort-select').value, '_blank')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition shadow-sm">Générer</button>
+                        <button type="button" data-window-open-select="#cohort-select" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition shadow-sm">Générer</button>
                     </form>
                 </div>
                 <div class="flex items-center justify-between p-4 bg-white rounded-lg border">
@@ -175,7 +196,7 @@
                             <option value="{% url 'reports:cohort_sessions' cohort.id %}">{{ cohort.name }} - {{ cohort.subject.name }}</option>
                             {% endfor %}
                         </select>
-                        <button type="button" onclick="window.open(document.getElementById('cohort-sessions-select').value, '_blank')" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition shadow-sm">Générer</button>
+                        <button type="button" data-window-open-select="#cohort-sessions-select" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition shadow-sm">Générer</button>
                     </form>
                 </div>
             </div>

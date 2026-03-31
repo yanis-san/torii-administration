@@ -60,6 +60,22 @@
                 Changer le Professeur
             </a>
             {% endif %}
+
+            {% if session.status == 'SCHEDULED' %}
+            <form method="post" action="{% url 'academics:postpone_session' session.id %}" class="inline" data-confirm="Reporter cette séance ?\n\nUne séance de rattrapage sera automatiquement ajoutée à la fin du planning.">
+                {% csrf_token %}
+                <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 text-white font-medium rounded-lg hover:bg-amber-700 transition shadow-sm text-sm">
+                    Reporter la Séance
+                </button>
+            </form>
+            {% elif session.status == 'POSTPONED' %}
+            <form method="post" action="{% url 'academics:cancel_postpone' session.id %}" class="inline" data-confirm="Annuler le report ?\n\nLa séance sera remise en Prévu et le rattrapage supprimé.">
+                {% csrf_token %}
+                <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition shadow-sm text-sm">
+                    Annuler le Report
+                </button>
+            </form>
+            {% endif %}
         </div>
     </div>
 
@@ -100,6 +116,17 @@
             {% endif %}
         </div>
 
+        {% if not session.status == 'COMPLETED' or is_editing %}
+        <div class="px-4 py-3 border-b border-gray-100 bg-white flex flex-wrap gap-2">
+            <button type="button" id="mark-all-present" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-green-100 text-green-800 hover:bg-green-200 transition">
+                Tout le monde présent
+            </button>
+            <button type="button" id="mark-all-absent" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-red-100 text-red-800 hover:bg-red-200 transition">
+                Tout le monde absent
+            </button>
+        </div>
+        {% endif %}
+
         <!-- Version Desktop: Tableau -->
         <div class="hidden md:block">
             <table class="w-full text-left border-collapse">
@@ -136,11 +163,13 @@
                         {% else %}
                             <td class="p-4 text-center">
                                 <input type="radio" name="status_{{ enrollment.student.id }}" value="PRESENT"
+                                       data-status="PRESENT"
                                        class="w-4 h-4 text-green-600 focus:ring-green-500"
                                        {% if current_status != 'ABSENT' %}checked{% endif %}>
                             </td>
                             <td class="p-4 text-center">
                                 <input type="radio" name="status_{{ enrollment.student.id }}" value="ABSENT"
+                                       data-status="ABSENT"
                                        class="w-4 h-4 text-red-600 focus:ring-red-500"
                                        {% if current_status == 'ABSENT' %}checked{% endif %}>
                             </td>
@@ -178,6 +207,7 @@
                     <div class="grid grid-cols-2 gap-2">
                         <label class="flex items-center gap-2 p-3 border-2 rounded-lg cursor-pointer transition {% if current_status != 'ABSENT' %}border-green-500 bg-green-50{% else %}border-gray-200{% endif %}">
                             <input type="radio" name="status_{{ enrollment.student.id }}" value="PRESENT"
+                                   data-status="PRESENT"
                                    class="w-5 h-5 text-green-600 focus:ring-green-500"
                                    {% if current_status != 'ABSENT' %}checked{% endif %}>
                             <span class="text-sm font-medium">Présent</span>
@@ -185,6 +215,7 @@
 
                         <label class="flex items-center gap-2 p-3 border-2 rounded-lg cursor-pointer transition {% if current_status == 'ABSENT' %}border-red-500 bg-red-50{% else %}border-gray-200{% endif %}">
                             <input type="radio" name="status_{{ enrollment.student.id }}" value="ABSENT"
+                                   data-status="ABSENT"
                                    class="w-5 h-5 text-red-600 focus:ring-red-500"
                                    {% if current_status == 'ABSENT' %}checked{% endif %}>
                             <span class="text-sm font-medium">Absent</span>
@@ -222,14 +253,16 @@
                     </div>
                     
                     <div class="pt-3 border-t border-gray-200">
-                        <div class="flex items-center gap-2">
-                            <input type="number" name="teacher_hourly_rate_override" 
+                        <div class="flex items-center gap-2" x-data>
+                            <input id="teacher-hourly-rate-override" type="number" name="teacher_hourly_rate_override" 
+                                   x-ref="overrideInput"
                                    class="flex-1 p-2 border-2 rounded-lg font-semibold text-center" 
                                    placeholder="Laisser vide pour utiliser le taux standard"
                                    value="{{ hourly_rate_override|default:'' }}"
                                    min="1"
                                    {% if session.status == 'COMPLETED' and not is_editing %}disabled{% endif %}>
-                            <button type="button" onclick="document.querySelector('input[name=teacher_hourly_rate_override]').value = ''; document.querySelector('input[name=teacher_hourly_rate_override]').focus();" 
+                            <button id="reset-hourly-rate" type="button"
+                                    @click="$refs.overrideInput.value = ''; $refs.overrideInput.focus()"
                                     class="px-3 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 text-sm font-medium"
                                     {% if session.status == 'COMPLETED' and not is_editing %}disabled{% endif %}>
                                 Réinitialiser
@@ -285,4 +318,33 @@
         </div>
     </form>
 </div>
+
+{% if not session.status == 'COMPLETED' or is_editing %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const markAllPresentBtn = document.getElementById('mark-all-present');
+    const markAllAbsentBtn = document.getElementById('mark-all-absent');
+
+    function setAllStatuses(status) {
+        document.querySelectorAll('input[type="radio"][data-status="' + status + '"]').forEach(function (input) {
+            if (!input.disabled) {
+                input.checked = true;
+            }
+        });
+    }
+
+    if (markAllPresentBtn) {
+        markAllPresentBtn.addEventListener('click', function () {
+            setAllStatuses('PRESENT');
+        });
+    }
+
+    if (markAllAbsentBtn) {
+        markAllAbsentBtn.addEventListener('click', function () {
+            setAllStatuses('ABSENT');
+        });
+    }
+});
+</script>
+{% endif %}
 {% endblock %}

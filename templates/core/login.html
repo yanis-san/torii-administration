@@ -6,21 +6,16 @@
     <title>Connexion - Institut Torii</title>
     {% load static %}
     <script src="{% static 'js/tailwind.min.js' %}"></script>
-    <style>
-        .japanese-gradient {
-            background: linear-gradient(135deg,
-                #DC143C 0%,      /* Rouge vif (crimson) */
-                #8B0000 15%,     /* Rouge sombre */
-                #B22222 30%,     /* Firebrick */
-                #FFFFFF 50%,     /* Blanc central */
-                #2C2C2C 70%,     /* Noir grisé */
-                #1a1a1a 85%,     /* Noir profond */
-                #000000 100%     /* Noir pur */
-            );
-        }
-    </style>
+    <link rel="stylesheet" href="{% static 'css/core/login.css' %}">
 </head>
-<body class="japanese-gradient min-h-screen flex items-center justify-center p-4">
+<body class="japanese-gradient min-h-screen flex items-center justify-center p-4"
+            x-data="{
+                trimUsername() {
+                        if (this.$refs.usernameInput) {
+                                this.$refs.usernameInput.value = this.$refs.usernameInput.value.trim();
+                        }
+                }
+            }">
 
     <div class="bg-white/95 backdrop-blur-sm p-4 sm:p-6 md:p-8 rounded-2xl shadow-2xl w-full max-w-md border-2 border-red-800">
         <div class="text-center mb-6 sm:mb-8">
@@ -36,7 +31,7 @@
             {% endfor %}
         {% endif %}
 
-        <form method="post" class="space-y-4 sm:space-y-6">
+        <form method="post" class="space-y-4 sm:space-y-6" @submit="trimUsername()">
             {% csrf_token %}
 
             <div>
@@ -46,6 +41,8 @@
                 <input type="text"
                        name="username"
                        id="username"
+                      x-ref="usernameInput"
+                      @input="trimUsername()"
                        required
                        class="w-full px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
                        placeholder="Votre nom d'utilisateur">
@@ -78,19 +75,5 @@
             </p>
         </div>
     </div>
-
-    <script>
-        // Supprimer automatiquement les espaces du champ username
-        document.getElementById('username').addEventListener('input', function(e) {
-            this.value = this.value.trim();
-        });
-        
-        // Nettoyer aussi avant la soumission du formulaire
-        document.querySelector('form').addEventListener('submit', function(e) {
-            const usernameInput = document.getElementById('username');
-            usernameInput.value = usernameInput.value.trim();
-        });
-    </script>
-
 </body>
 </html>

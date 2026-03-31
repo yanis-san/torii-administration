@@ -1,8 +1,8 @@
-<div class="fixed inset-0 bg-gray-700/60 backdrop-blur-sm overflow-y-auto h-full w-full z-50" id="edit-student-modal">
+<div class="fixed inset-0 bg-gray-700/60 backdrop-blur-sm overflow-y-auto h-full w-full z-50" id="edit-student-modal" data-close-on-escape="true">
     <div class="relative top-10 mx-auto p-5 border w-full max-w-3xl shadow-xl rounded-xl bg-white">
         <div class="flex justify-between items-center mb-4">
             <h3 class="text-xl font-bold text-gray-900">Modifier l'étudiant</h3>
-            <button onclick="document.getElementById('edit-student-modal').remove()" class="text-gray-500 hover:text-red-500 text-2xl">&times;</button>
+            <button type="button" data-remove-selector="#edit-student-modal" class="text-gray-500 hover:text-red-500 text-2xl">&times;</button>
         </div>
 
         <form hx-post="{% url 'students:edit' student.id %}" hx-target="body" hx-swap="beforeend" enctype="multipart/form-data" hx-encoding="multipart/form-data">
@@ -84,22 +84,9 @@
             </div>
 
             <div class="mt-5 flex justify-end gap-3">
-                <button type="button" onclick="document.getElementById('edit-student-modal').remove()" class="px-4 py-2 rounded border text-gray-700">Annuler</button>
+                <button type="button" data-remove-selector="#edit-student-modal" class="px-4 py-2 rounded border text-gray-700">Annuler</button>
                 <button type="submit" class="px-5 py-2 rounded bg-indigo-600 text-white font-semibold">Enregistrer</button>
             </div>
         </form>
-    </div>
-</div>
-
-<script>
-document.addEventListener('keydown', function(event) {
-    if (event.key === 'Escape') {
-        const modal = document.getElementById('edit-student-modal');
-        if (modal) {
-            modal.remove();
-        }
-    }
-});
-</script>
     </div>
 </div>

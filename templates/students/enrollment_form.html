@@ -1,5 +1,49 @@
-{% load custom_filters %}
-<div class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" id="enrollment-modal">
+﻿{% load custom_filters %}
+{% load static %}
+<div class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" id="enrollment-modal" data-close-on-escape="true" data-submit-on-ctrl-enter="true"
+     x-data="{
+        prefillFromProspect() {
+            const raw = sessionStorage.getItem('prospect_prefill');
+            if (!raw) {
+                return;
+            }
+
+            try {
+                const data = JSON.parse(raw);
+                const setValue = (selector, value) => {
+                    const field = this.$el.querySelector(selector);
+                    if (field && value) {
+                        field.value = value;
+                    }
+                };
+
+                setValue('input[name=\"first_name\"]', data.first_name);
+                setValue('input[name=\"last_name\"]', data.last_name);
+                setValue('input[name=\"email\"]', data.email);
+                setValue('input[name=\"phone\"]', data.phone);
+                setValue('input[name=\"birth_date\"]', data.birth_date);
+                setValue('textarea[name=\"motivation\"]', data.motivation);
+
+                sessionStorage.removeItem('prospect_prefill');
+                this.$el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } catch (error) {
+                console.error('Erreur pre-remplissage:', error);
+            }
+        },
+        submitOnShortcut(event) {
+            if (!(event.ctrlKey || event.metaKey) || event.key !== 'Enter') {
+                return;
+            }
+            if (!this.$el.dataset.submitOnCtrlEnter) {
+                return;
+            }
+
+            event.preventDefault();
+            this.$refs.submitButton?.click();
+        }
+     }"
+     x-init="setTimeout(() => prefillFromProspect(), 100)"
+     @keydown.window="submitOnShortcut($event)">
     <div class="relative top-10 mx-auto p-5 border w-full max-w-4xl shadow-lg rounded-md bg-white">
 
         <div class="flex justify-between items-center mb-4">
@@ -10,7 +54,7 @@
                     Nouvelle Inscription
                 {% endif %}
             </h3>
-            <button onclick="document.getElementById('enrollment-modal').remove()" class="text-gray-500 hover:text-red-500 text-2xl">&times;</button>
+            <button type="button" data-remove-selector="#enrollment-modal" class="text-gray-500 hover:text-red-500 text-2xl">&times;</button>
         </div>
 
         <form hx-post="{% url 'create_enrollment' %}" hx-target="body" hx-swap="beforeend" enctype="multipart/form-data" hx-encoding="multipart/form-data">
@@ -27,12 +71,12 @@
                     </div>
                 </div>
             {% endif %}
-            
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                
+
                 <div class="bg-blue-50 p-4 rounded-lg">
                     <h4 class="font-bold text-blue-700 mb-3">👤 Informations Élève</h4>
-                    
+
                     <div class="grid grid-cols-2 gap-2 mb-3">
                         <div>
                             <label class="block text-gray-700 text-sm font-bold mb-2">Nom *</label>
@@ -104,7 +148,7 @@
                 <div class="bg-green-50 p-4 rounded-lg flex flex-col justify-between">
                     <div>
                         <h4 class="font-bold text-green-700 mb-3">📚 Cours & Tarif</h4>
-                        
+
                         <div class="mb-3">
                             <label class="block text-gray-700 text-sm font-bold mb-2">Choisir le Groupe (optionnel)</label>
                             <select name="cohort_id" class="shadow border rounded w-full py-2 px-3 text-gray-700 bg-white focus:outline-none">
@@ -153,93 +197,13 @@
             </div>
 
             <div class="mt-6 flex justify-end gap-3 border-t pt-4">
-                <button type="button" onclick="document.getElementById('enrollment-modal').remove()" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded">
+                <button type="button" data-remove-selector="#enrollment-modal" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded">
                     Annuler
                 </button>
-                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded shadow-lg transform transition hover:scale-105">
+                <button type="submit" x-ref="submitButton" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded shadow-lg transform transition hover:scale-105">
                     ✅ Valider l'Inscription
                 </button>
             </div>
         </form>
     </div>
 </div>
-
-<script>
-// Pré-remplissage depuis les prospects - exécution immédiate
-(function() {
-    const prospectData = sessionStorage.getItem('prospect_prefill');
-    if (prospectData) {
-        try {
-            const data = JSON.parse(prospectData);
-            
-            // Pré-remplir les champs immédiatement
-            setTimeout(function() {
-                const firstNameInput = document.querySelector('input[name="first_name"]');
-                const lastNameInput = document.querySelector('input[name="last_name"]');
-                const emailInput = document.querySelector('input[name="email"]');
-                const phoneInput = document.querySelector('input[name="phone"]');
-                const birthDateInput = document.querySelector('input[name="birth_date"]');
-                const motivationInput = document.querySelector('textarea[name="motivation"]');
-                
-                if (firstNameInput && data.first_name) {
-                    firstNameInput.value = data.first_name;
-                    console.log('Prénom rempli:', data.first_name);
-                }
-                if (lastNameInput && data.last_name) {
-                    lastNameInput.value = data.last_name;
-                    console.log('Nom rempli:', data.last_name);
-                }
-                if (emailInput && data.email) {
-                    emailInput.value = data.email;
-                    console.log('Email rempli:', data.email);
-                }
-                if (phoneInput && data.phone) {
-                    phoneInput.value = data.phone;
-                    console.log('Téléphone rempli:', data.phone);
-                }
-                if (birthDateInput && data.birth_date) {
-                    birthDateInput.value = data.birth_date;
-                    console.log('Date de naissance remplie:', data.birth_date);
-                }
-                if (motivationInput && data.motivation) {
-                    motivationInput.value = data.motivation;
-                    console.log('Motivation remplie:', data.motivation);
-                }
-                
-                // Nettoyer sessionStorage
-                sessionStorage.removeItem('prospect_prefill');
-                
-                // Scroll vers le formulaire
-                document.getElementById('enrollment-modal').scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }, 100);
-        } catch (e) {
-            console.error('Erreur pré-remplissage:', e);
-        }
-    }
-})();
-
-// Fermer avec Escape
-document.addEventListener('keydown', function(event) {
-    if (event.key === 'Escape') {
-        const modal = document.getElementById('enrollment-modal');
-        if (modal) {
-            modal.remove();
-        }
-    }
-    
-    // Soumettre avec Ctrl+Enter
-    if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
-        event.preventDefault();
-        const modal = document.getElementById('enrollment-modal');
-        if (modal) {
-            const form = modal.querySelector('form');
-            if (form) {
-                const submitButton = form.querySelector('button[type="submit"]');
-                if (submitButton) {
-                    submitButton.click();
-                }
-            }
-        }
-    }
-});
-</script>

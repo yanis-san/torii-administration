@@ -3,7 +3,89 @@
 {% block title %}Copier Numéros WhatsApp{% endblock %}
 
 {% block content %}
-<div class="space-y-6">
+<div class="space-y-6" x-data="{
+    loading: false,
+    hasResult: false,
+    errorMessage: '',
+    cohortName: '',
+    totalNumbers: 0,
+    phoneNumbers: '',
+    students: [],
+    showCopyConfirmation: false,
+    copyMessage: '✅ Numeros copies dans le presse-papiers !',
+    async copyText(text) {
+        if (!text) {
+            return false;
+        }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            try {
+                await navigator.clipboard.writeText(text);
+                return true;
+            } catch (_error) {
+                return false;
+            }
+        }
+        const temp = document.createElement('textarea');
+        temp.value = text;
+        document.body.appendChild(temp);
+        temp.select();
+        const success = document.execCommand('copy');
+        document.body.removeChild(temp);
+        return success;
+    },
+    notifyCopy(message, timeoutMs) {
+        this.copyMessage = message;
+        this.showCopyConfirmation = true;
+        window.setTimeout(() => {
+            this.showCopyConfirmation = false;
+        }, timeoutMs);
+    },
+    async fetchPhoneNumbers(cohortId) {
+        if (!cohortId) {
+            return;
+        }
+
+        this.loading = true;
+        this.hasResult = false;
+        this.errorMessage = '';
+
+        try {
+            const response = await fetch('/emails/api/cohort/' + cohortId + '/phone-numbers/');
+            const data = await response.json();
+            this.loading = false;
+
+            if (data.error) {
+                this.errorMessage = data.error;
+                return;
+            }
+
+            this.cohortName = data.cohort_name || '';
+            this.totalNumbers = data.total_students || 0;
+            this.phoneNumbers = data.phone_numbers_formatted || '';
+            this.students = Array.isArray(data.students) ? data.students : [];
+            this.hasResult = true;
+        } catch (_error) {
+            this.loading = false;
+            this.errorMessage = 'Erreur lors de la recuperation des numeros';
+        }
+    },
+    async copyAll() {
+        const success = await this.copyText(this.phoneNumbers);
+        if (success) {
+            this.notifyCopy('✅ Numeros copies dans le presse-papiers !', 3000);
+            return;
+        }
+        this.errorMessage = 'Impossible de copier les numeros.';
+    },
+    async copySingle(phone) {
+        const success = await this.copyText(phone || '');
+        if (success) {
+            this.notifyCopy('✅ Numero copie !', 2000);
+            return;
+        }
+        this.errorMessage = 'Impossible de copier le numero.';
+    }
+}">
     <div class="flex items-center gap-3">
         <h1 class="text-2xl font-bold text-gray-800">📱 Copier Numéros WhatsApp</h1>
     </div>
@@ -15,8 +97,9 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             {% for cohort in cohorts %}
             <button 
-                onclick="fetchPhoneNumbers({{ cohort.id }}, '{{ cohort.name }}')"
-                class="text-left p-4 border-2 border-gray-200 rounded-lg hover:border-indigo-500 hover:bg-indigo-50 transition cursor-pointer"
+                type="button"
+                @click="fetchPhoneNumbers('{{ cohort.id }}')"
+                class="cohort-phone-btn text-left p-4 border-2 border-gray-200 rounded-lg hover:border-indigo-500 hover:bg-indigo-50 transition cursor-pointer"
             >
                 <div class="font-semibold text-gray-800">{{ cohort.name }}</div>
                 <div class="text-sm text-gray-500">{{ cohort.subject.name }} - {{ cohort.level.name }}</div>
@@ -27,17 +110,17 @@
     </div>
 
     <!-- Résultat (masqué par défaut) -->
-    <div id="result_container" style="display: none;" class="space-y-4">
+    <div id="result_container" x-show="hasResult" class="space-y-4">
         <!-- Statistiques -->
         <div class="bg-blue-50 rounded-xl border border-blue-200 p-6">
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <p class="text-sm text-blue-600 font-semibold">Cohort</p>
-                    <p id="cohort_name_display" class="text-xl font-bold text-blue-900"></p>
+                    <p id="cohort_name_display" class="text-xl font-bold text-blue-900" x-text="cohortName"></p>
                 </div>
                 <div>
                     <p class="text-sm text-blue-600 font-semibold">Numéros trouvés</p>
-                    <p id="total_numbers" class="text-xl font-bold text-blue-900">0</p>
+                    <p id="total_numbers" class="text-xl font-bold text-blue-900" x-text="totalNumbers">0</p>
                 </div>
             </div>
         </div>
@@ -47,7 +130,9 @@
             <div class="flex items-center justify-between mb-4">
                 <h3 class="text-lg font-bold text-gray-800">Numéros formatés (séparés par virgule)</h3>
                 <button 
-                    onclick="copyToClipboard()"
+                    id="copy-all-numbers"
+                    type="button"
+                    @click="copyAll()"
                     class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-semibold transition"
                 >
                     📋 Copier
@@ -57,6 +142,7 @@
             <textarea 
                 id="phone_numbers_textarea"
                 readonly
+                :value="phoneNumbers"
                 class="w-full h-32 p-4 border border-gray-300 rounded-lg font-mono text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 placeholder="Les numéros s'afficheront ici..."
             ></textarea>
@@ -67,127 +153,41 @@
             <h3 class="text-lg font-bold text-gray-800 mb-4">Détail des étudiants</h3>
             
             <div id="students_list" class="space-y-2 max-h-96 overflow-y-auto">
-                <!-- Sera rempli par JavaScript -->
+                <template x-for="student in students" :key="student.phone_clean || student.phone || student.name">
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                        <div class="flex-1">
+                            <div class="font-medium text-gray-900" x-text="student.name || ''"></div>
+                            <div class="text-sm text-gray-500 font-mono" x-text="student.phone || ''"></div>
+                        </div>
+                        <button type="button" @click="copySingle(student.phone_clean)" class="ml-4 px-3 py-1 bg-indigo-100 text-indigo-700 rounded text-sm hover:bg-indigo-200 transition">
+                            Copier
+                        </button>
+                    </div>
+                </template>
             </div>
         </div>
 
         <!-- Copié confirmation -->
         <div 
             id="copy_confirmation" 
-            style="display: none;"
+            x-show="showCopyConfirmation"
             class="fixed bottom-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-2"
         >
-            <span>✅ Numéros copiés dans le presse-papiers !</span>
+            <span x-text="copyMessage">✅ Numeros copies dans le presse-papiers !</span>
         </div>
     </div>
 
     <!-- Message d'erreur -->
-    <div id="error_container" style="display: none;" class="bg-red-50 rounded-xl border border-red-200 p-4">
-        <p class="text-red-700" id="error_message"></p>
+    <div id="error_container" x-show="errorMessage" class="bg-red-50 rounded-xl border border-red-200 p-4">
+        <p class="text-red-700" id="error_message" x-text="errorMessage"></p>
     </div>
 
     <!-- Chargement -->
-    <div id="loading" style="display: none;" class="text-center py-8">
+    <div id="loading" x-show="loading" class="text-center py-8">
         <div class="inline-block">
             <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
         </div>
         <p class="text-gray-500 mt-4">Récupération des numéros...</p>
     </div>
 </div>
-
-<script>
-function fetchPhoneNumbers(cohortId, cohortName) {
-    const loading = document.getElementById('loading');
-    const resultContainer = document.getElementById('result_container');
-    const errorContainer = document.getElementById('error_container');
-    
-    loading.style.display = 'block';
-    resultContainer.style.display = 'none';
-    errorContainer.style.display = 'none';
-    
-    fetch(`/emails/api/cohort/${cohortId}/phone-numbers/`)
-        .then(response => response.json())
-        .then(data => {
-            loading.style.display = 'none';
-            
-            if (data.error) {
-                showError(data.error);
-                return;
-            }
-            
-            // Remplir les données
-            document.getElementById('cohort_name_display').textContent = data.cohort_name;
-            document.getElementById('total_numbers').textContent = data.total_students;
-            document.getElementById('phone_numbers_textarea').value = data.phone_numbers_formatted;
-            
-            // Remplir la liste des étudiants
-            const studentsList = document.getElementById('students_list');
-            studentsList.innerHTML = '';
-            
-            data.students.forEach((student, index) => {
-                const div = document.createElement('div');
-                div.className = 'flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200';
-                div.innerHTML = `
-                    <div class="flex-1">
-                        <div class="font-medium text-gray-900">${student.name}</div>
-                        <div class="text-sm text-gray-500 font-mono">${student.phone}</div>
-                    </div>
-                    <button 
-                        onclick="copySingleNumber('${student.phone_clean}')"
-                        class="ml-4 px-3 py-1 bg-indigo-100 text-indigo-700 rounded text-sm hover:bg-indigo-200 transition"
-                    >
-                        Copier
-                    </button>
-                `;
-                studentsList.appendChild(div);
-            });
-            
-            resultContainer.style.display = 'block';
-        })
-        .catch(error => {
-            loading.style.display = 'none';
-            showError('Erreur lors de la récupération des numéros');
-            console.error('Error:', error);
-        });
-}
-
-function copyToClipboard() {
-    const textarea = document.getElementById('phone_numbers_textarea');
-    textarea.select();
-    document.execCommand('copy');
-    
-    // Afficher la confirmation
-    const confirmation = document.getElementById('copy_confirmation');
-    confirmation.style.display = 'flex';
-    
-    setTimeout(() => {
-        confirmation.style.display = 'none';
-    }, 3000);
-}
-
-function copySingleNumber(phone) {
-    const temp = document.createElement('textarea');
-    temp.value = phone;
-    document.body.appendChild(temp);
-    temp.select();
-    document.execCommand('copy');
-    document.body.removeChild(temp);
-    
-    // Afficher la confirmation
-    const confirmation = document.getElementById('copy_confirmation');
-    confirmation.innerHTML = '<span>✅ Numéro copié !</span>';
-    confirmation.style.display = 'flex';
-    
-    setTimeout(() => {
-        confirmation.style.display = 'none';
-    }, 2000);
-}
-
-function showError(message) {
-    const errorContainer = document.getElementById('error_container');
-    const errorMessage = document.getElementById('error_message');
-    errorMessage.textContent = message;
-    errorContainer.style.display = 'block';
-}
-</script>
 {% endblock %}

@@ -46,6 +46,29 @@ class Student(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
 
+    def save(self, *args, **kwargs):
+        from core.image_utils import compress_image
+        
+        # Determine if images have changed or are new
+        try:
+            this = Student.objects.get(id=self.id)
+            if this.profile_picture != self.profile_picture:
+                self.profile_picture = compress_image(self.profile_picture, max_width=800)
+            if this.id_card_front != self.id_card_front:
+                self.id_card_front = compress_image(self.id_card_front, max_width=1024)
+            if this.id_card_back != self.id_card_back:
+                self.id_card_back = compress_image(self.id_card_back, max_width=1024)
+        except Student.DoesNotExist:
+            # New instance
+            if self.profile_picture:
+                self.profile_picture = compress_image(self.profile_picture, max_width=800)
+            if self.id_card_front:
+                self.id_card_front = compress_image(self.id_card_front, max_width=1024)
+            if self.id_card_back:
+                self.id_card_back = compress_image(self.id_card_back, max_width=1024)
+                
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f"{self.last_name.upper()} {self.first_name}"
 

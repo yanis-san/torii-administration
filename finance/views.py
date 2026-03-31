@@ -686,6 +686,8 @@ def payment_status_dashboard(request):
     cohort_id = request.GET.get('cohort', '')
     modality = request.GET.get('modality', '')  # ONLINE ou IN_PERSON
     individual_only = request.GET.get('individual', '')  # '1' pour oui
+    status_filter = request.GET.get('status', '')  # IMPAYÉ | PARTIEL | PAYÉ
+    search_query = (request.GET.get('q') or '').strip().lower()
     
     # Construire la query de base
     enrollments = Enrollment.objects.filter(is_active=True).select_related(
@@ -712,6 +714,19 @@ def payment_status_dashboard(request):
         total_paid_amount = sum(p.amount for p in enrollment.payments.all())
         remaining = enrollment.tariff.amount - total_paid_amount
         percentage_paid = 0 if enrollment.tariff.amount == 0 else (total_paid_amount / enrollment.tariff.amount) * 100
+
+        status = 'PAYÉ' if remaining == 0 else ('PARTIEL' if total_paid_amount > 0 else 'IMPAYÉ')
+
+        # Filtres rapides applicatifs, sans toucher au calcul métier
+        if status_filter and status != status_filter:
+            continue
+
+        if search_query:
+            full_name = f"{enrollment.student.first_name} {enrollment.student.last_name}".lower()
+            student_code = (enrollment.student.student_code or '').lower()
+            cohort_name = enrollment.cohort.name.lower()
+            if search_query not in full_name and search_query not in student_code and search_query not in cohort_name:
+                continue
         
         total_tariff += enrollment.tariff.amount
         total_paid += total_paid_amount
@@ -737,7 +752,7 @@ def payment_status_dashboard(request):
             'paid': total_paid_amount,
             'remaining': remaining,
             'percentage_paid': round(percentage_paid, 1),
-            'status': 'PAYÉ' if remaining == 0 else ('PARTIEL' if total_paid_amount > 0 else 'IMPAYÉ'),
+            'status': status,
             'pack': pack_info,
         })
     
@@ -774,6 +789,8 @@ def payment_status_dashboard(request):
         'selected_cohort': cohort_id,
         'selected_modality': modality,
         'selected_individual': individual_only,
+        'selected_status': status_filter,
+        'search_query': request.GET.get('q', ''),
         'total_tariff': total_tariff,
         'total_paid': total_paid,
         'total_remaining': total_remaining,

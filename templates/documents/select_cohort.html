@@ -1,9 +1,58 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Rapports PDF{% endblock %}
 
 {% block content %}
-<div class="space-y-6">
+<div class="space-y-6" x-data="{
+    csrfToken: '{{ csrf_token }}',
+    globalImportUrl: '{% url "documents:import_global_sync" %}',
+    statusKind: '',
+    statusMessage: '',
+    openDropdown: null,
+    postFile(url, file) {
+        const formData = new FormData();
+        formData.append('sync_file', file);
+        return fetch(url, {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-CSRFToken': this.csrfToken }
+        }).then((response) => response.json());
+    },
+    setGlobalStatus(kind, message) {
+        this.statusKind = kind;
+        this.statusMessage = message;
+    },
+    async uploadGlobalSync(file) {
+        if (!file || !this.globalImportUrl) {
+            return;
+        }
+        this.setGlobalStatus('loading', 'Synchronisation en cours...');
+        try {
+            const data = await this.postFile(this.globalImportUrl, file);
+            if (data.status === 'success') {
+                this.setGlobalStatus('success', '✅ ' + String(data.message || '').replace(/\n/g, ' | '));
+                window.setTimeout(() => window.location.reload(), 3000);
+                return;
+            }
+            this.setGlobalStatus('error', '❌ ' + (data.message || 'Echec de synchronisation'));
+        } catch (error) {
+            this.setGlobalStatus('error', '❌ Erreur reseau: ' + error.message);
+        }
+    },
+    async uploadSync(file, cohortId, syncType) {
+        if (!file || !cohortId || !syncType) {
+            return;
+        }
+        try {
+            const data = await this.postFile('/documents/sync/import/' + cohortId + '/' + syncType + '/', file);
+            window.alert('✅ ' + (data.message || 'Synchronisation terminee'));
+            window.location.reload();
+        } catch (error) {
+            window.alert('❌ Erreur : ' + error);
+        }
+    }
+}" @click="openDropdown = null">
 
     <div class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-6 rounded-xl shadow-lg">
         <h1 class="text-2xl font-bold">Rapports PDF & ZIP</h1>
@@ -41,17 +90,18 @@
                 {% endif %}
                 
                 <!-- BOUTON IMPORT -->
-                <button onclick="document.getElementById('globalSyncFileInput').click()"
+                <button id="global-sync-upload-button" type="button"
+                    @click.stop="$refs.globalSyncFileInput.click()"
                         class="inline-flex items-center gap-2 bg-cyan-600 hover:bg-cyan-700 text-white px-6 py-3 rounded-lg font-semibold transition shadow-md">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
                     </svg>
                     📤 Import & Sync (PC2)
                 </button>
-                <input type="file" id="globalSyncFileInput" accept=".zip" style="display:none" onchange="uploadGlobalSync(this.files[0])">
+                <input type="file" id="globalSyncFileInput" x-ref="globalSyncFileInput" @change="uploadGlobalSync($event.target.files[0])" accept=".zip" class="hidden">
             </div>
             
-            <div id="globalSyncStatus" class="text-sm text-gray-600 hidden"></div>
+            <div id="globalSyncStatus" x-show="statusMessage" :class="statusKind === 'loading' ? 'text-sm text-blue-600 font-semibold' : (statusKind === 'success' ? 'text-sm text-green-600 font-semibold' : 'text-sm text-red-600 font-semibold')" x-text="statusMessage"></div>
         </div>
     </div>
 
@@ -157,28 +207,26 @@
                             </a>
                             
                             <!-- Sync -->
-                            <div class="dropdown relative md:ml-auto">
-                                <button class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded-lg font-medium text-sm transition shadow-sm">
+                            <div class="dropdown relative md:ml-auto" @click.stop>
+                                <button type="button" @click="openDropdown = (openDropdown === '{{ cohort.id }}' ? null : '{{ cohort.id }}')" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded-lg font-medium text-sm transition shadow-sm">
                                     ⟲ Sync
                                 </button>
-                                <div class="dropdown-menu absolute hidden bg-white border border-gray-300 rounded-lg shadow-lg z-10 right-0 mt-1 w-48">
+                                <div class="dropdown-menu absolute bg-white border border-gray-300 rounded-lg shadow-lg z-10 right-0 mt-1 w-48 transition-opacity duration-200" x-show="openDropdown === '{{ cohort.id }}'">
                                     <a href="{% url 'documents:export_sync_csv' cohort.id 'attendance' %}" class="block px-4 py-2 text-sm hover:bg-gray-100">
                                         📥 Export Presences (CSV)
                                     </a>
-                                    <button onclick="document.getElementById('import-att-{{ cohort.id }}').click()" class="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100">
+                                    <button type="button" @click="$refs.attInput{{ cohort.id }}.click()" class="open-sync-input block w-full text-left px-4 py-2 text-sm hover:bg-gray-100">
                                         📤 Import Presences (CSV)
                                     </button>
-                                    <input type="file" id="import-att-{{ cohort.id }}" accept=".csv" style="display:none;" 
-                                           onchange="uploadSync(this, {{ cohort.id }}, 'attendance')">
+                                    <input type="file" id="import-att-{{ cohort.id }}" x-ref="attInput{{ cohort.id }}" accept=".csv" class="hidden sync-import-input" @change="uploadSync($event.target.files[0], '{{ cohort.id }}', 'attendance')">
                                     <hr/>
                                     <a href="{% url 'documents:export_sync_csv' cohort.id 'payments' %}" class="block px-4 py-2 text-sm hover:bg-gray-100">
                                         📥 Export Paiements (CSV)
                                     </a>
-                                    <button onclick="document.getElementById('import-pay-{{ cohort.id }}').click()" class="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100">
+                                    <button type="button" @click="$refs.payInput{{ cohort.id }}.click()" class="open-sync-input block w-full text-left px-4 py-2 text-sm hover:bg-gray-100">
                                         📤 Import Paiements (CSV)
                                     </button>
-                                    <input type="file" id="import-pay-{{ cohort.id }}" accept=".csv" style="display:none;" 
-                                           onchange="uploadSync(this, {{ cohort.id }}, 'payments')">
+                                    <input type="file" id="import-pay-{{ cohort.id }}" x-ref="payInput{{ cohort.id }}" accept=".csv" class="hidden sync-import-input" @change="uploadSync($event.target.files[0], '{{ cohort.id }}', 'payments')">
                                 </div>
                             </div>
                         </div>
@@ -194,89 +242,5 @@
     </div>
 
 </div>
-
-<script>
-// Dropdown toggle
-document.querySelectorAll('.dropdown').forEach(d => {
-    d.querySelector('button').addEventListener('click', () => {
-        const menu = d.querySelector('.dropdown-menu');
-        menu.classList.toggle('hidden');
-    });
-});
-
-// Close dropdowns when clicking outside
-document.addEventListener('click', e => {
-    if (!e.target.closest('.dropdown')) {
-        document.querySelectorAll('.dropdown-menu').forEach(m => m.classList.add('hidden'));
-    }
-});
-
-// Upload Global Sync
-function uploadGlobalSync(file) {
-    if (!file) return;
-    
-    const statusDiv = document.getElementById('globalSyncStatus');
-    statusDiv.className = 'text-sm text-blue-600 font-semibold';
-    statusDiv.textContent = '⏳ Synchronisation en cours...';
-    statusDiv.classList.remove('hidden');
-    
-    const formData = new FormData();
-    formData.append('sync_file', file);
-    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
-    
-    fetch("{% url 'documents:import_global_sync' %}", {
-        method: 'POST',
-        body: formData,
-        headers: {
-            'X-CSRFToken': '{{ csrf_token }}'
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.status === 'success') {
-            statusDiv.className = 'text-sm text-green-600 font-semibold';
-            statusDiv.innerHTML = '✅ ' + data.message.replace(/\n/g, '<br/>');
-            setTimeout(() => {
-                location.reload();
-            }, 3000);
-        } else {
-            statusDiv.className = 'text-sm text-red-600 font-semibold';
-            statusDiv.textContent = '❌ ' + data.message;
-        }
-    })
-    .catch(error => {
-        statusDiv.className = 'text-sm text-red-600 font-semibold';
-        statusDiv.textContent = '❌ Erreur réseau: ' + error.message;
-    });
-}
-
-// Upload Sync per cohort
-function uploadSync(input, cohortId, dataType) {
-    const file = input.files[0];
-    if (!file) return;
-    
-    const formData = new FormData();
-    formData.append('sync_file', file);
-    
-    fetch(`/documents/sync/import/${cohortId}/${dataType}/`, {
-        method: 'POST',
-        body: formData,
-        headers: {'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value}
-    })
-    .then(r => r.json())
-    .then(data => {
-        alert(`✅ ${data.message}`);
-        location.reload();
-    })
-    .catch(e => alert(`❌ Erreur : ${e}`));
-}
-</script>
-
-<style>
-.dropdown-menu {
-    transition: opacity 0.2s;
-}
-</style>
-
 {% endblock %}
 

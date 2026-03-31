@@ -1,11 +1,37 @@
 {% extends 'base.html' %}
-{% load static %}
 {% load inventory_filters %}
 
 {% block title %}{{ shopping_list.title }}{% endblock %}
 
 {% block content %}
-<div class="min-h-screen bg-gray-50">
+<div class="min-h-screen bg-gray-50" x-data="{
+    toggleUrlTemplate: '{% url "inventory:toggle_purchased" 0 %}',
+    csrfToken: '{{ csrf_token }}',
+    async togglePurchased(itemId, event) {
+        if (!itemId || !this.toggleUrlTemplate) {
+            return;
+        }
+        const checkbox = event.target;
+        const url = this.toggleUrlTemplate.replace('0', itemId);
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': this.csrfToken,
+                    'Content-Type': 'application/json'
+                }
+            });
+            const data = await response.json();
+            if (data.success) {
+                window.location.reload();
+                return;
+            }
+            checkbox.checked = !checkbox.checked;
+        } catch (_error) {
+            checkbox.checked = !checkbox.checked;
+        }
+    }
+}">
     <div class="max-w-4xl mx-auto py-6 sm:px-6 lg:px-8">
         <!-- En-tête -->
         <div class="mb-8">
@@ -74,8 +100,7 @@
                 <span class="text-sm font-bold text-gray-600">{{ total_purchased }}/{{ total_items }} achetés</span>
             </div>
             <div class="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
-                <div class="bg-green-500 h-full rounded-full transition-all" 
-                     style="width: {{ progress_percentage }}%"></div>
+                <div class="progress-fill bg-green-500 h-full rounded-full transition-all" :style="'width: {{ progress_percentage }}%'" data-progress="{{ progress_percentage }}"></div>
             </div>
         </div>
 
@@ -94,8 +119,8 @@
                             <input type="checkbox" 
                                    class="mt-1 toggle-purchased" 
                                    data-item-id="{{ item.id }}"
-                                   {% if item.is_purchased %}checked{% endif %}
-                                   onchange="togglePurchased(this)">
+                                @change="togglePurchased('{{ item.id }}', $event)"
+                                {% if item.is_purchased %}checked{% endif %}>
                             
                             <div class="flex-1">
                                 <h3 class="font-bold text-gray-900 {% if item.is_purchased %}line-through text-gray-500{% endif %}">
@@ -197,26 +222,4 @@
         </div>
     </div>
 </div>
-
-<script>
-function togglePurchased(checkbox) {
-    const itemId = checkbox.dataset.itemId;
-    
-    fetch(`{% url 'inventory:toggle_purchased' 0 %}`.replace('0', itemId), {
-        method: 'POST',
-        headers: {
-            'X-CSRFToken': '{{ csrf_token }}',
-            'Content-Type': 'application/json'
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            // Recharger la page ou mettre à jour l'UI
-            location.reload();
-        }
-    })
-    .catch(error => console.error('Erreur:', error));
-}
-</script>
 {% endblock %}

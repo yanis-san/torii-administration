@@ -5,37 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Institut Torii</title>
 
-    {% load static %}
-    <script src="{% static 'js/htmx.min.js' %}"></script>
+    {% load static tailwind_tags %}
+    {% tailwind_css %}
+    <script defer src="{% static 'js/htmx.min.js' %}"></script>
+    
     <script defer src="{% static 'js/alpine-collapse.min.js' %}"></script>
     <script defer src="{% static 'js/alpinejs.min.js' %}"></script>
-    <script src="{% static 'js/tailwind.min.js' %}"></script>
-
-    <style>
-        /* Custom scrollbar for sidebar */
-        .custom-scrollbar::-webkit-scrollbar {
-            width: 6px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-            background: transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: rgba(148, 163, 184, 0.3);
-            border-radius: 3px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: rgba(148, 163, 184, 0.5);
-        }
-
-        /* Smooth transitions */
-        .sidebar-transition {
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-    </style>
+    <link rel="stylesheet" href="{% static 'css/base.css' %}">
 
     {% block extra_css %}{% endblock %}
 </head>
-<body class="bg-gray-100 font-sans text-gray-900" x-data="{ sidebarCollapsed: false, gestionOpen: true, financeOpen: true, adminOpen: true, mobileMenuOpen: false }" x-init="
+<body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}' class="bg-gray-100 font-sans text-gray-900" x-data="{ sidebarCollapsed: false, gestionOpen: true, financeOpen: true, adminOpen: true, mobileMenuOpen: false }" x-init="
     (() => {
         const ls = (k, d) => { const v = localStorage.getItem(k); return v === null ? d : (v === 'true'); };
         sidebarCollapsed = ls('sidebarCollapsed', false);
@@ -43,87 +23,16 @@
         financeOpen = ls('financeOpen', true);
         adminOpen = true;
     })()
-">
-
-    <script>
-        document.body.addEventListener('htmx:configRequest', (event) => {
-            event.detail.headers['X-CSRFToken'] = '{{ csrf_token }}';
-        });
-
-        // Raccourci clavier "/" ou "Ctrl+K" pour focus sur la barre de recherche
-        document.addEventListener('keydown', function(e) {
-            // Si "/" est pressé (sans modificateur) et qu'on n'est pas dans un input/textarea
-            if (e.key === '/' && !e.ctrlKey && !e.metaKey && !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
-                e.preventDefault();
-                const searchInput = document.querySelector('input[name="q"]');
-                if (searchInput) {
-                    searchInput.focus();
-                    searchInput.select();
-                }
-            }
-            // Si "Ctrl+K" (ou Cmd+K sur Mac) est pressé
-            if (e.key === 'k' && (e.ctrlKey || e.metaKey)) {
-                e.preventDefault();
-                const searchInput = document.querySelector('input[name="q"]');
-                if (searchInput) {
-                    searchInput.focus();
-                    searchInput.select();
-                }
-            }
-            // Échap pour défocus
-            if (e.key === 'Escape' && document.activeElement.tagName === 'INPUT') {
-                document.activeElement.blur();
-            }
-
-            // Alt+S pour plier/déplier la sidebar
-            if (e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey && e.key.toLowerCase() === 's') {
-                e.preventDefault();
-                // Trouver l'élément Alpine et déclencher le toggle
-                const sidebarButton = document.querySelector('aside button[class*="absolute"]');
-                if (sidebarButton) {
-                    sidebarButton.click();
-                }
-            }
-
-            // Ctrl+Alt+S pour démarrer une sauvegarde
-            if (e.ctrlKey && e.altKey && e.key.toLowerCase() === 's') {
-                e.preventDefault();
-                // Trouver le bouton de sauvegarde dans la sidebar
-                const backupButton = Array.from(document.querySelectorAll('button')).find(btn => 
-                    btn.textContent.includes('Sauvegarder') || btn.textContent.includes('💾')
-                );
-                if (backupButton) {
-                    backupButton.click();
-                }
-            }
-
-            // Raccourcis Alt+[numéro] pour navigation sidebar (chiffres du haut du clavier)
-            if (e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
-                const shortcuts = {
-                    // AZERTY: Alt+² (Backquote) for Dashboard
-                    'Backquote': '{% url "dashboard" %}',
-                    // Then AZERTY top row: & é " ' ( - ... mapped via Digit codes
-                    'Digit1': '{% url "students:list" %}',
-                    'Digit2': '{% url "academics:list" %}',
-                    'Digit3': '{% url "prospects:list" %}',
-                    'Digit4': '{% url "finance:payment_status_dashboard" %}',
-                    'Digit5': '{% url "finance:teacher_cohort_payroll" %}',
-                    'Digit6': '{% url "cash:dashboard" %}',
-                };
-                
-                if (shortcuts[e.code]) {
-                    e.preventDefault();
-                    window.location.href = shortcuts[e.code];
-                }
-            }
-            
-            // Ctrl+Alt+Q pour Page Synchronisation (raccourci spécial)
-            if (e.altKey && e.ctrlKey && e.key.toLowerCase() === 'q' && !e.metaKey && !e.shiftKey) {
-                e.preventDefault();
-                window.location.href = '{% url "documents:sync_page" %}';
-            }
-        });
-    </script>
+"
+      data-csrf-token="{{ csrf_token }}"
+      data-url-dashboard="{% url 'dashboard' %}"
+      data-url-students="{% url 'students:list' %}"
+      data-url-academics="{% url 'academics:list' %}"
+      data-url-prospects="{% url 'prospects:list' %}"
+      data-url-payment-status="{% url 'finance:payment_status_dashboard' %}"
+      data-url-teacher-payroll="{% url 'finance:teacher_cohort_payroll' %}"
+      data-url-cash-dashboard="{% url 'cash:dashboard' %}"
+      data-url-sync-page="{% url 'documents:sync_page' %}">
 
     <div class="flex h-screen overflow-hidden">
 
@@ -406,5 +315,7 @@
         </main>
     </div>
 
+    {% block extra_js %}{% endblock %}
+    <script src="{% static 'js/base.js' %}"></script>
 </body>
 </html>

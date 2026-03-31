@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+
+{% block title %}Certificats - Sélection du Groupe{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- En-tête -->
+    <div class="bg-gradient-to-r from-amber-500 to-orange-600 text-white p-6 rounded-xl shadow-lg">
+        <h1 class="text-3xl font-bold">🏆 Génération de Certificats</h1>
+        <p class="text-amber-100 mt-2">
+            Générez des certificats de fin de niveau pour vos étudiants (Chinois, Coréen, Japonais)
+        </p>
+    </div>
+
+    <!-- Info box -->
+    <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg">
+        <div class="flex items-start gap-3">
+            <svg class="w-6 h-6 text-blue-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <div>
+                <h3 class="font-semibold text-blue-800">Critères d'éligibilité</h3>
+                <p class="text-blue-700 text-sm mt-1">
+                    Un étudiant doit avoir assisté à <strong>plus de 50%</strong> des séances validées (COMPLETED) pour recevoir un certificat.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    {% if cohorts %}
+    <!-- Liste des groupes -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="bg-gray-50 px-6 py-4 border-b border-gray-200">
+            <h2 class="text-lg font-semibold text-gray-800">
+                Groupes éligibles ({{ cohorts|length }})
+            </h2>
+        </div>
+        
+        <div class="divide-y divide-gray-100">
+            {% for item in cohorts %}
+            <div class="p-4 md:p-6 hover:bg-gray-50 transition">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                    <!-- Infos groupe -->
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2 mb-1">
+                            <!-- Badge langue -->
+                            {% if item.language == 'cn' %}
+                            <span class="px-2 py-1 text-xs font-bold bg-red-100 text-red-700 rounded-full">🇨🇳 Chinois</span>
+                            {% elif item.language == 'kr' %}
+                            <span class="px-2 py-1 text-xs font-bold bg-blue-100 text-blue-700 rounded-full">🇰🇷 Coréen</span>
+                            {% elif item.language == 'jp' %}
+                            <span class="px-2 py-1 text-xs font-bold bg-pink-100 text-pink-700 rounded-full">🇯🇵 Japonais</span>
+                            {% endif %}
+                            
+                            <span class="text-xs text-gray-500">{{ item.cohort.abbreviation }}</span>
+                        </div>
+                        
+                        <h3 class="font-semibold text-gray-800">{{ item.cohort.name }}</h3>
+                        
+                        <div class="flex flex-wrap gap-4 mt-2 text-sm text-gray-600">
+                            <span class="flex items-center gap-1">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                                </svg>
+                                {{ item.active_students }} étudiant{% if item.active_students != 1 %}s{% endif %}
+                            </span>
+                            <span class="flex items-center gap-1">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
+                                </svg>
+                                {{ item.completed_sessions }}/{{ item.total_sessions }} séances validées
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <!-- Actions -->
+                    <div class="flex items-center gap-2">
+                        {% if item.can_generate %}
+                        <a href="{% url 'certificate:generate' item.cohort.id %}" 
+                           class="inline-flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-lg transition shadow-sm">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            Générer
+                        </a>
+                        {% else %}
+                        <span class="inline-flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-500 font-semibold rounded-lg cursor-not-allowed">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            Non disponible
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    
+    {% else %}
+    <!-- Aucun groupe -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center">
+        <svg class="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+        </svg>
+        <h3 class="text-lg font-semibold text-gray-800 mb-2">Aucun groupe éligible</h3>
+        <p class="text-gray-600">
+            Les certificats ne sont disponibles que pour les groupes de Chinois, Coréen ou Japonais avec des séances validées.
+        </p>
+    </div>
+    {% endif %}
+
+    <!-- Retour -->
+    <div class="flex justify-start">
+        <a href="{% url 'reports:menu' %}" class="inline-flex items-center gap-2 text-gray-600 hover:text-gray-800 transition">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+            </svg>
+            Retour aux rapports
+        </a>
+    </div>
+
+</div>
+{% endblock %}

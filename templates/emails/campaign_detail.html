@@ -66,23 +66,23 @@
         </div>
 
         <!-- Onglets pour succès/échecs -->
-        <div class="mt-6">
+        <div class="mt-6" x-data="{ tab: 'all' }">
             <div class="border-b border-gray-200">
                 <nav class="-mb-px flex space-x-8" aria-label="Tabs">
-                    <button onclick="showTab('all')" id="tab-all" class="tab-button active border-indigo-500 text-indigo-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                    <button type="button" @click="tab = 'all'" :class="tab === 'all' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
                         Tous ({{ recipients_data|length }})
                     </button>
-                    <button onclick="showTab('success')" id="tab-success" class="tab-button border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                    <button type="button" @click="tab = 'success'" :class="tab === 'success' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
                         ✅ Réussis ({{ success_recipients|length }})
                     </button>
-                    <button onclick="showTab('failed')" id="tab-failed" class="tab-button border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                    <button type="button" @click="tab = 'failed'" :class="tab === 'failed' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
                         ❌ Échoués ({{ failed_recipients|length }})
                     </button>
                 </nav>
             </div>
 
             <!-- Contenu des onglets -->
-            <div id="content-all" class="tab-content mt-4">
+            <div x-show="tab === 'all'" class="mt-4">
                 <div class="bg-gray-50 rounded-lg border border-gray-200 max-h-96 overflow-y-auto">
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-100 sticky top-0">
@@ -129,7 +129,7 @@
                 </div>
             </div>
 
-            <div id="content-success" class="tab-content hidden mt-4">
+            <div x-show="tab === 'success'" class="mt-4">
                 <div class="bg-green-50 rounded-lg border border-green-200 p-4 max-h-96 overflow-y-auto">
                     <div class="space-y-2">
                         {% for recipient in success_recipients %}
@@ -147,7 +147,7 @@
                 </div>
             </div>
 
-            <div id="content-failed" class="tab-content hidden mt-4">
+            <div x-show="tab === 'failed'" class="mt-4">
                 <div class="bg-red-50 rounded-lg border border-red-200 p-4 max-h-96 overflow-y-auto">
                     <div class="space-y-2">
                         {% for recipient in failed_recipients %}
@@ -181,25 +181,4 @@
         </div>
     </div>
 </div>
-
-<script>
-function showTab(tab) {
-    // Masquer tous les contenus
-    document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-    
-    // Réinitialiser tous les boutons
-    document.querySelectorAll('.tab-button').forEach(el => {
-        el.classList.remove('border-indigo-500', 'text-indigo-600');
-        el.classList.add('border-transparent', 'text-gray-500');
-    });
-    
-    // Afficher le contenu sélectionné
-    document.getElementById('content-' + tab).classList.remove('hidden');
-    
-    // Activer le bouton sélectionné
-    const activeButton = document.getElementById('tab-' + tab);
-    activeButton.classList.remove('border-transparent', 'text-gray-500');
-    activeButton.classList.add('border-indigo-500', 'text-indigo-600');
-}
-</script>
 {% endblock %}

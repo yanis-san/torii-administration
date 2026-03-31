@@ -81,7 +81,7 @@
             <a href="{% url 'students:detail' student.id %}" class="text-indigo-600 hover:text-indigo-900 font-medium text-xs lg:text-sm border border-indigo-200 hover:border-indigo-600 px-2 lg:px-3 py-1 rounded-lg transition">
                 Gérer
             </a>
-            <button onclick="deleteStudent({{ student.id }}, '{{ student.first_name }} {{ student.last_name }}')" class="text-red-600 hover:text-red-900 font-medium text-xs lg:text-sm border border-red-200 hover:border-red-600 px-2 lg:px-3 py-1 rounded-lg transition">
+            <button data-delete-student="true" data-student-id="{{ student.id }}" data-student-name="{{ student.first_name }} {{ student.last_name }}" class="text-red-600 hover:text-red-900 font-medium text-xs lg:text-sm border border-red-200 hover:border-red-600 px-2 lg:px-3 py-1 rounded-lg transition">
                 🗑️
             </button>
         </div>

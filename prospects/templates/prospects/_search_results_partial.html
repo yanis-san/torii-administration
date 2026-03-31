@@ -20,15 +20,15 @@
   <td class="px-4 py-2">
     <div class="flex items-center gap-1 flex-nowrap">
       {% if not p.converted %}
-        <button type="button" class="px-3 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 whitespace-nowrap" onclick="convertProspect({{ p.id }})">Convertir</button>
+        <button type="button" class="px-3 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 whitespace-nowrap" data-prospect-action="convert" data-prospect-id="{{ p.id }}">Convertir</button>
       {% else %}
-        <button type="button" class="px-3 py-1 bg-orange-600 text-white rounded text-xs hover:bg-orange-700 whitespace-nowrap" onclick="cancelConversion({{ p.id }})">Annuler</button>
+        <button type="button" class="px-3 py-1 bg-orange-600 text-white rounded text-xs hover:bg-orange-700 whitespace-nowrap" data-prospect-action="cancel" data-prospect-id="{{ p.id }}">Annuler</button>
       {% endif %}
       <button hx-get="{% url 'prospects:edit_prospect' p.id %}" hx-target="body" hx-swap="beforeend"
               class="px-2 py-1 bg-amber-500 text-white rounded text-xs hover:bg-amber-600" title="Modifier">
         ✏️
       </button>
-      <button onclick="deleteProspect({{ p.id }})"
+      <button type="button" data-prospect-action="delete" data-prospect-id="{{ p.id }}"
               class="px-2 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600" title="Supprimer">
         🗑️
       </button>

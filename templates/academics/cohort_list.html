@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 {% load custom_filters %}
 
 {% block title %}Gestion des Groupes{% endblock %}
@@ -243,19 +244,13 @@
 
     <!-- Bouton Tous les Bilans en bas à droite -->
     <div class="flex justify-end">
-        <a href="{% url 'documents:download_all_cohorts_payment_report' %}" onclick="return confirm('Vous êtes sur le point de télécharger les bilans de paiement pour TOUS les groupes.\n\nCela peut prendre quelques secondes...\n\nContinuer ?');" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition shadow-sm text-sm">
+        <a href="{% url 'documents:download_all_cohorts_payment_report' %}" data-confirm="Vous êtes sur le point de télécharger les bilans de paiement pour TOUS les groupes.\n\nCela peut prendre quelques secondes...\n\nContinuer ?" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition shadow-sm text-sm">
             <span>💰</span> Tous les Bilans
         </a>
     </div>
 </div>
+{% endblock %}
 
-<script>
-    // Raccourci Alt+A pour Nouveau Groupe
-    document.addEventListener('keydown', function(e) {
-        if (e.altKey && e.key === 'a') {
-            e.preventDefault();
-            document.getElementById('new-cohort-btn').click();
-        }
-    });
-</script>
+{% block extra_js %}
+<script src="{% static 'js/academics/cohort_list.js' %}"></script>
 {% endblock %}

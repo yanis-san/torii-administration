@@ -268,16 +268,16 @@
                                 Changer Prof
                             </a>
                             {% endif %}
-                            <form method="post" action="{% url 'academics:postpone_session' session.id %}" class="inline" 
-                                  onsubmit="return confirm('Êtes-vous sûr de vouloir reporter cette séance ?\n\nUne séance de rattrapage sera automatiquement ajoutée à la fin du planning.');">
+                                <form method="post" action="{% url 'academics:postpone_session' session.id %}" class="inline" 
+                                    data-confirm="Êtes-vous sûr de vouloir reporter cette séance ?\n\nUne séance de rattrapage sera automatiquement ajoutée à la fin du planning.">
                                 {% csrf_token %}
                                 <button type="submit" class="text-amber-700 hover:text-amber-900 font-medium text-sm border border-amber-200 hover:border-amber-500 px-3 py-1 rounded-lg transition">
                                     Reporter
                                 </button>
                             </form>
                         {% elif session.status == 'POSTPONED' %}
-                            <form method="post" action="{% url 'academics:cancel_postpone' session.id %}" class="inline"
-                                  onsubmit="return confirm('Annuler le report ?\n\nLa séance sera remise en Prévu et le rattrapage supprimé.');">
+                                <form method="post" action="{% url 'academics:cancel_postpone' session.id %}" class="inline"
+                                    data-confirm="Annuler le report ?\n\nLa séance sera remise en Prévu et le rattrapage supprimé.">
                                 {% csrf_token %}
                                 <button type="submit" class="text-blue-600 hover:text-blue-900 font-medium text-sm border border-blue-200 hover:border-blue-500 px-3 py-1 rounded-lg transition">
                                     Annuler le report
@@ -315,7 +315,7 @@
                 </p>
             </div>
             <form method="post" action="{% url 'academics:finish_cohort' cohort.id %}"
-                  onsubmit="return confirm('Supprimer {{ remaining_sessions }} séance(s) non terminée(s) et fixer la date de fin à aujourd\'hui ?') && confirm('Confirmez une deuxième fois : action irréversible.');">
+                data-confirm="Supprimer {{ remaining_sessions }} séance(s) non terminée(s) et fixer la date de fin à aujourd\'hui ?||Confirmez une deuxième fois : action irréversible.">
                 {% csrf_token %}
                 <button type="submit" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap shadow-sm transition">
                     Terminer le groupe

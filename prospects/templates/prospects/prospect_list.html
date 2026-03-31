@@ -2,22 +2,17 @@
 {% load static %}
 {% block title %}Prospects{% endblock %}
 {% block extra_css %}
-<style>
-  .dropzone { border: 2px dashed #cbd5e1; }
-  .dropzone.dragover { border-color: #3b82f6; background-color: #eff6ff; }
-  .table-fixed thead th { position: sticky; top: 0; background: #fff; z-index: 1; }
-  .form-input { border: 1px solid #e2e8f0; }
-  .form-input:focus { outline: none; box-shadow: 0 0 0 3px rgba(59,130,246,.3); border-color: #3b82f6; }
-  .badge { padding: 2px 8px; border-radius: 9999px; font-size: 12px; }
-  .badge-green { background: #dcfce7; color: #166534; }
-  .badge-amber { background: #fef3c7; color: #92400e; }
-  .btn { padding: 6px 10px; border-radius: 6px; font-size: 14px; }
-  .btn-primary { background: #2563eb; color: #fff; }
-  .btn-primary:hover { background: #1d4ed8; }
-  .btn-muted { background: #e5e7eb; color: #374151; }
-</style>
+<link rel="stylesheet" href="{% static 'css/prospects/prospect_list.css' %}">
 {% endblock %}
 {% block content %}
+<div id="prospects-page-config"
+  data-upload-csv-url="{% url 'prospects:upload_csv' %}"
+  data-upload-detail-template="{% url 'prospects:upload_detail' 0 %}"
+  data-get-prospect-data-template="{% url 'prospects:get_prospect_data' 0 %}"
+  data-cancel-conversion-template="{% url 'prospects:cancel_conversion' 0 %}"
+  data-delete-prospect-template="{% url 'prospects:delete_prospect' 0 %}"
+  data-enrollment-form-url="{% url 'students:enrollment_form' %}"
+  class="hidden"></div>
 <div class="px-4 py-4">
   <div class="flex items-center justify-between mb-4">
     <h1 class="text-2xl font-semibold">Prospects</h1>
@@ -178,15 +173,15 @@
             <td class="px-4 py-2">
               <div class="flex items-center gap-1 flex-nowrap">
                 {% if not p.converted %}
-                  <button type="button" class="px-3 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 whitespace-nowrap" onclick="convertProspect({{ p.id }})">Convertir</button>
+                  <button type="button" class="px-3 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 whitespace-nowrap" data-prospect-action="convert" data-prospect-id="{{ p.id }}">Convertir</button>
                 {% else %}
-                  <button type="button" class="px-3 py-1 bg-orange-600 text-white rounded text-xs hover:bg-orange-700 whitespace-nowrap" onclick="cancelConversion({{ p.id }})">Annuler</button>
+                  <button type="button" class="px-3 py-1 bg-orange-600 text-white rounded text-xs hover:bg-orange-700 whitespace-nowrap" data-prospect-action="cancel" data-prospect-id="{{ p.id }}">Annuler</button>
                 {% endif %}
                 <button hx-get="{% url 'prospects:edit_prospect' p.id %}" hx-target="body" hx-swap="beforeend"
                         class="px-2 py-1 bg-amber-500 text-white rounded text-xs hover:bg-amber-600" title="Modifier">
                   ✏️
                 </button>
-                <button onclick="deleteProspect({{ p.id }})"
+                <button type="button" data-prospect-action="delete" data-prospect-id="{{ p.id }}"
                         class="px-2 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600" title="Supprimer">
                   🗑️
                 </button>
@@ -222,164 +217,5 @@
   </div>
 </div>
 
-<script>
-  function getCookie(name) {
-    const value = `; ${document.cookie}`;
-    const parts = value.split(`; ${name}=`);
-    if (parts.length === 2) return parts.pop().split(';').shift();
-  }
-
-  document.addEventListener('DOMContentLoaded', function() {
-    const dropzone = document.getElementById('dropzone');
-    const fileInput = document.getElementById('fileInput');
-    const uploadStatus = document.getElementById('uploadStatus');
-
-    if (!dropzone || !fileInput || !uploadStatus) {
-      console.error('Elements not found for CSV upload');
-      return;
-    }
-
-    function showStatus(msg, cls) {
-      uploadStatus.className = `mt-2 text-sm ${cls||''}`;
-      uploadStatus.textContent = msg;
-    }
-    const uploadBtn = document.getElementById('uploadBtn');
-    if (uploadBtn) {
-      uploadBtn.addEventListener('click', () => fileInput.click());
-    }
-    dropzone.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      dropzone.classList.add('dragover');
-    });
-    dropzone.addEventListener('dragleave', (e) => {
-      dropzone.classList.remove('dragover');
-    });
-    dropzone.addEventListener('drop', (e) => {
-      e.preventDefault();
-      dropzone.classList.remove('dragover');
-      const file = e.dataTransfer.files[0];
-      if (file) uploadCSV(file);
-    });
-    fileInput.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (file) uploadCSV(file);
-    });
-
-    async function uploadCSV(file) {
-      showStatus('Import en cours...', 'text-slate-500');
-      const formData = new FormData();
-      formData.append('file', file);
-      try {
-        const res = await fetch('{% url "prospects:upload_csv" %}', {
-          method: 'POST',
-          headers: { 'X-CSRFToken': getCookie('csrftoken') },
-          body: formData,
-          credentials: 'same-origin',
-        });
-        if (!res.ok) {
-          const txt = await res.text();
-          showStatus('Erreur import CSV', 'text-red-600');
-          console.error('Upload error', res.status, txt);
-          return;
-        }
-        const data = await res.json();
-        
-        // Afficher le résumé avec lien vers les détails
-        let statusMsg = `✅ ${data.created} nouveau(x) • ${data.skipped} fusionnés`;
-        if (data.duplicates && data.duplicates.length > 0) {
-          statusMsg += ` • ${data.duplicates.length} doublon(s) détecté(s)`;
-        }
-        showStatus(statusMsg, 'text-green-700');
-        
-        // Afficher le bouton pour voir les détails
-        const uploadStatus = document.getElementById('uploadStatus');
-        const detailsBtn = document.createElement('button');
-        detailsBtn.type = 'button';
-        detailsBtn.className = 'mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-medium';
-        detailsBtn.textContent = '📊 Voir les détails';
-        detailsBtn.onclick = () => window.location.href = `{% url 'prospects:upload_detail' 0 %}`.replace('0', data.upload_id);
-        uploadStatus.appendChild(detailsBtn);
-        
-      } catch (err) {
-        console.error(err);
-        showStatus('Erreur réseau pendant l\'import', 'text-red-600');
-      }
-    }
-  });
-
-  // Fonction globale pour convertir un prospect (appelée par onclick)
-  window.convertProspect = async function(id) {
-    try {
-      // Précharger les données du prospect (sans marquer comme converti)
-      const res = await fetch(`{% url 'prospects:get_prospect_data' 0 %}`.replace('0', id));
-      if (!res.ok) return;
-      const data = await res.json();
-      
-      // Stocker l'ID du prospect pour le marquer plus tard
-      sessionStorage.setItem('converting_prospect_id', id);
-      
-      sessionStorage.setItem('prospect_prefill', JSON.stringify({
-        first_name: data.first_name || '',
-        last_name: data.last_name || '',
-        email: data.email || '',
-        phone: data.phone || '',
-        birth_date: data.birth_date || '',
-        motivation: data.message || ''
-      }));
-      
-      // Ouvrir le formulaire d'inscription
-      if (window.htmx) {
-        htmx.ajax('GET', '{% url "students:enrollment_form" %}', { target: 'body', swap: 'beforeend' });
-      } else {
-        window.location.href = '{% url "students:enrollment_form" %}';
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  // Fonction globale pour annuler une conversion
-  window.cancelConversion = async function(id) {
-    if (!confirm('Êtes-vous sûr de vouloir annuler cette conversion ? L\'étudiant correspondant sera supprimé.')) {
-      return;
-    }
-    try {
-      const res = await fetch(`{% url 'prospects:cancel_conversion' 0 %}`.replace('0', id), {
-        method: 'POST',
-        headers: { 'X-CSRFToken': getCookie('csrftoken') },
-        credentials: 'same-origin',
-      });
-      if (res.ok) {
-        window.location.reload();
-      } else {
-        alert('Erreur lors de l\'annulation');
-      }
-    } catch (e) {
-      console.error(e);
-      alert('Erreur réseau');
-    }
-  };
-
-  // Fonction globale pour supprimer un prospect avec confirmation
-  window.deleteProspect = async function(id) {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer ce prospect ?')) {
-      return;
-    }
-    try {
-      const res = await fetch(`{% url 'prospects:delete_prospect' 0 %}`.replace('0', id), {
-        method: 'POST',
-        headers: { 'X-CSRFToken': getCookie('csrftoken') },
-        credentials: 'same-origin',
-      });
-      if (res.ok) {
-        window.location.reload();
-      } else {
-        alert('Erreur lors de la suppression');
-      }
-    } catch (e) {
-      console.error(e);
-      alert('Erreur réseau');
-    }
-  };
-</script>
+<script src="{% static 'js/prospects/prospect_list.js' %}"></script>
 {% endblock %}

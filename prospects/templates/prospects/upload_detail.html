@@ -3,7 +3,7 @@
 {% block title %}Détails de l'import - {{ upload.filename }}{% endblock %}
 
 {% block content %}
-<div class="max-w-6xl mx-auto px-4 py-8">
+<div class="max-w-6xl mx-auto px-4 py-8" x-data="{ sections: { created: false, duplicates: false }, details: {} }">
   <!-- Retour -->
   <div class="mb-6">
     <a href="{% url 'prospects:upload_history' %}" class="text-blue-600 hover:text-blue-700 font-medium">
@@ -46,14 +46,14 @@
   <!-- Prospects Créés - Dépliable -->
   {% if upload.created_list %}
   <div class="bg-white rounded-lg shadow p-6 mb-6">
-    <button type="button" onclick="toggleSection('created')" class="w-full text-left flex items-center gap-2 hover:bg-green-50 p-2 rounded -m-2 mb-2">
-      <span class="text-green-600 font-bold text-xl" id="createdArrow">▶</span>
+    <button type="button" @click="sections.created = !sections.created" class="w-full text-left flex items-center gap-2 hover:bg-green-50 p-2 rounded -m-2 mb-2">
+      <span class="text-green-600 font-bold text-xl" x-text="sections.created ? '▼' : '▶'"></span>
       <h2 class="text-2xl font-bold text-green-900 flex-1">
         ✅ Prospects créés ({{ upload.created_count }})
       </h2>
     </button>
 
-    <div id="createdSection" class="hidden">
+    <div x-show="sections.created" x-collapse>
       <div class="space-y-3">
         {% for item in upload.created_list %}
         <div class="bg-green-50 border border-green-200 rounded-lg p-4">
@@ -81,24 +81,24 @@
   <!-- Doublons - Dépliable -->
   {% if upload.duplicates_count > 0 %}
   <div class="bg-white rounded-lg shadow p-6 mb-6">
-    <button type="button" onclick="toggleSection('duplicates')" class="w-full text-left flex items-center gap-2 hover:bg-slate-50 p-2 rounded -m-2 mb-2">
-      <span class="text-slate-600 font-bold text-xl" id="duplicatesArrow">▶</span>
+    <button type="button" @click="sections.duplicates = !sections.duplicates" class="w-full text-left flex items-center gap-2 hover:bg-slate-50 p-2 rounded -m-2 mb-2">
+      <span class="text-slate-600 font-bold text-xl" x-text="sections.duplicates ? '▼' : '▶'"></span>
       <h2 class="text-2xl font-bold text-slate-900 flex-1">
         🔄 Doublons détectés et fusionnés ({{ upload.duplicates_count }})
       </h2>
     </button>
 
-    <div id="duplicatesSection" class="hidden">
+    <div x-show="sections.duplicates" x-collapse>
       <div class="space-y-3">
         {% for dup in upload.duplicates_data %}
         <div class="bg-slate-50 border border-slate-200 rounded-lg p-4">
-          <button type="button" onclick="toggleDetails({{ forloop.counter0 }})" class="w-full text-left flex items-center gap-2 hover:bg-slate-100 p-2 rounded -m-2">
-            <span class="text-slate-600 font-bold" id="arrow{{ forloop.counter0 }}" style="display: inline-block; width: 20px;">▶</span>
+          <button type="button" @click="details['d{{ forloop.counter0 }}'] = !details['d{{ forloop.counter0 }}']" class="w-full text-left flex items-center gap-2 hover:bg-slate-100 p-2 rounded -m-2">
+            <span class="text-slate-600 font-bold inline-block w-5" x-text="details['d{{ forloop.counter0 }}'] ? '▼' : '▶'"></span>
             <span class="font-semibold text-slate-900">Ligne {{ dup.row }}: {{ dup.new.first_name }} {{ dup.new.last_name }}</span>
             <span class="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded ml-auto">{{ dup.reasons|length }} critère(s)</span>
           </button>
 
-          <div id="details{{ forloop.counter0 }}" class="hidden mt-4 ml-4 pt-4 border-t border-slate-200">
+          <div x-show="details['d{{ forloop.counter0 }}']" x-collapse class="mt-4 ml-4 pt-4 border-t border-slate-200">
             <!-- Raisons -->
             <div class="mb-4">
               <h4 class="font-semibold text-slate-900 mb-2">Raisons du doublon:</h4>
@@ -203,32 +203,4 @@
     </div>
   </div>
 </div>
-
-<script>
-  function toggleSection(section) {
-    const sectionEl = document.getElementById(section + 'Section');
-    const arrow = document.getElementById(section + 'Arrow');
-    
-    sectionEl.classList.toggle('hidden');
-    
-    if (sectionEl.classList.contains('hidden')) {
-      arrow.textContent = '▶';
-    } else {
-      arrow.textContent = '▼';
-    }
-  }
-
-  function toggleDetails(idx) {
-    const details = document.getElementById('details' + idx);
-    const arrow = document.getElementById('arrow' + idx);
-    
-    details.classList.toggle('hidden');
-    
-    if (details.classList.contains('hidden')) {
-      arrow.textContent = '▶';
-    } else {
-      arrow.textContent = '▼';
-    }
-  }
-</script>
 {% endblock %}

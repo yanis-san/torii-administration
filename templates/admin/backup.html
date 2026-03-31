@@ -4,65 +4,51 @@
 {% block title %}Gestion des Sauvegardes - Admin{% endblock %}
 
 {% block content %}
+<link rel="stylesheet" href="{% static 'css/admin/backup.css' %}">
 <div id="content-main">
-    <h1>💾 Gestion des Sauvegardes de la Base de Données</h1>
+    <h1 class="backup-title">Gestion des Sauvegardes de la Base de Donnees</h1>
     
-    <div style="margin-top: 20px;">
+    <div class="backup-page">
         <!-- Section Infos -->
-        <div style="background: #f0f0f0; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+        <div class="backup-card backup-card-muted">
             <h2>📊 Informations</h2>
             <p><strong>📁 Dossier de sauvegarde:</strong> {{ backup_dir }}</p>
             <p><strong>📦 Nombre de sauvegardes:</strong> {{ total_backups }}</p>
         </div>
 
         <!-- Section Actions -->
-        <div style="background: #e8f4f8; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+        <div class="backup-card backup-card-info">
             <h2>⚡ Actions</h2>
-            <button id="btn-backup" style="
-                padding: 10px 20px;
-                background: #417690;
-                color: white;
-                border: none;
-                border-radius: 5px;
-                cursor: pointer;
-                font-size: 16px;
-            ">🔄 Créer une Sauvegarde</button>
+            <button id="btn-backup" class="backup-btn backup-btn-primary">Creer une sauvegarde</button>
         </div>
 
         <!-- Section Sauvegardes existantes -->
-        <div style="background: #fffbf0; padding: 15px; border-radius: 5px;">
+        <div class="backup-card backup-card-warn">
             <h2>📋 Sauvegardes Existantes</h2>
-            <table style="width: 100%; border-collapse: collapse;">
+            <table class="backup-table">
                 <thead>
-                    <tr style="background: #417690; color: white;">
-                        <th style="padding: 10px; text-align: left;">Fichier</th>
-                        <th style="padding: 10px; text-align: left;">Taille</th>
-                        <th style="padding: 10px; text-align: left;">Date</th>
-                        <th style="padding: 10px; text-align: left;">Intégrité</th>
-                        <th style="padding: 10px; text-align: center;">Actions</th>
+                    <tr class="backup-table-head-row">
+                        <th>Fichier</th>
+                        <th>Taille</th>
+                        <th>Date</th>
+                        <th>Integrite</th>
+                        <th class="backup-center">Actions</th>
                     </tr>
                 </thead>
                 <tbody id="backup-list">
                     {% for backup in backup_list %}
-                    <tr style="border-bottom: 1px solid #ddd;">
-                        <td style="padding: 10px;">{{ backup.name }}</td>
-                        <td style="padding: 10px;">{{ backup.size_mb|floatformat:2 }} MB</td>
-                        <td style="padding: 10px;">{{ backup.date }}</td>
-                        <td style="padding: 10px;">✅ {{ backup.hash }}</td>
-                        <td style="padding: 10px; text-align: center;">
-                            <button class="btn-restore" data-backup="{{ backup.name }}" style="
-                                padding: 5px 10px;
-                                background: #28a745;
-                                color: white;
-                                border: none;
-                                border-radius: 3px;
-                                cursor: pointer;
-                            ">📥 Restaurer</button>
+                    <tr class="backup-table-row">
+                        <td>{{ backup.name }}</td>
+                        <td>{{ backup.size_mb|floatformat:2 }} MB</td>
+                        <td>{{ backup.date }}</td>
+                        <td>OK {{ backup.hash }}</td>
+                        <td class="backup-center">
+                            <button class="btn-restore backup-btn backup-btn-success" data-backup="{{ backup.name }}">Restaurer</button>
                         </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="5" style="padding: 20px; text-align: center; color: #999;">
+                        <td colspan="5" class="backup-empty">
                             Aucune sauvegarde trouvée. Créez la première en cliquant sur le bouton ci-dessus.
                         </td>
                     </tr>
@@ -73,70 +59,11 @@
     </div>
 </div>
 
-<script>
-document.getElementById('btn-backup').addEventListener('click', function() {
-    if (confirm('🔄 Créer une nouvelle sauvegarde?')) {
-        fetch('{% url "admin:backup_create" %}', {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
-            }
-        })
-        .then(r => r.json())
-        .then(data => {
-            if (data.success) {
-                alert(data.message);
-                location.reload();
-            } else {
-                alert(data.message);
-            }
-        })
-        .catch(e => alert('❌ Erreur: ' + e));
-    }
-});
+<div id="backup-config"
+     class="hidden"
+     data-backup-create-url="{% url 'admin:backup_create' %}"
+     data-backup-restore-url="{% url 'admin:backup_restore' %}"></div>
 
-document.querySelectorAll('.btn-restore').forEach(btn => {
-    btn.addEventListener('click', function() {
-        const backup = this.dataset.backup;
-        if (confirm('⚠️ ATTENTION: Ceci va REMPLACER la base de données actuelle. Êtes-vous sûr?\\n\\nSauvegarde: ' + backup)) {
-            fetch('{% url "admin:backup_restore" %}', {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: 'backup_name=' + encodeURIComponent(backup)
-            })
-            .then(r => r.json())
-            .then(data => {
-                alert(data.message);
-                if (data.success) {
-                    setTimeout(() => location.reload(), 2000);
-                }
-            })
-            .catch(e => alert('❌ Erreur: ' + e));
-        }
-    });
-});
-</script>
+<script src="{% static 'js/admin/backup.js' %}"></script>
 
-<style>
-    h1 {
-        color: #417690;
-        border-bottom: 2px solid #417690;
-        padding-bottom: 10px;
-    }
-    
-    h2 {
-        color: #417690;
-        margin-top: 0;
-    }
-    
-    table {
-        background: white;
-        border: 1px solid #ddd;
-        border-radius: 5px;
-        overflow: hidden;
-    }
-</style>
 {% endblock %}

@@ -5,7 +5,7 @@ from students.models import Enrollment, Attendance
 from .models import Cohort, CourseSession
 from datetime import datetime, date, timedelta
 from django.db.models import Count, Q
-from core.models import AcademicYear
+from core.models import AcademicYear, User
 
 
 def cohort_list(request):

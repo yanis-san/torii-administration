@@ -9,6 +9,9 @@ def generate_installments(sender, instance, created, **kwargs):
     """
     Génère l'échéancier automatiquement dès qu'une inscription est créée.
     """
+    if kwargs.get('raw', False):
+        return
+
     if created:
         # 1. Cas Paiement TOTAL ou PACK
         if instance.payment_plan in ['FULL', 'PACK']:

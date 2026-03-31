@@ -13,6 +13,9 @@ def create_attendance_for_new_enrollment(sender, instance, created, **kwargs):
     Quand un élève s'inscrit, on l'ajoute automatiquement 
     à toutes les séances FUTURES du groupe.
     """
+    if kwargs.get('raw', False):
+        return
+
     if created and instance.is_active:
         # S'assurer qu'une fiche de frais annuelle existe pour l'année active (état par défaut: non payé)
         current_year = AcademicYear.get_current()
@@ -70,6 +73,9 @@ def create_attendance_for_new_session(sender, instance, created, **kwargs):
     Quand une séance est créée (ou reportée/générée), 
     on crée les lignes de présence pour tous les élèves ACTIFS.
     """
+    if kwargs.get('raw', False):
+        return
+
     if created:
         active_enrollments = Enrollment.objects.filter(
             cohort=instance.cohort,

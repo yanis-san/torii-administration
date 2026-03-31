@@ -41,9 +41,9 @@
                 </div>
 
                 {% if not category.is_total %}
-                <div class="flex gap-2" onclick="event.stopPropagation();">
+                <div class="flex gap-2" x-on:click.stop>
                     <form method="post" action="{% url 'cash:reset_category' category.id %}" 
-                          onsubmit="return confirm('Remettre cette catégorie à 0 DA ?')" class="flex-1">
+                          data-confirm="Remettre cette catégorie à 0 DA ?" class="flex-1">
                         {% csrf_token %}
                         <button type="submit" class="w-full bg-amber-500 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-amber-600 shadow-sm hover:shadow-md transition-all">
                             Reset à 0

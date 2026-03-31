@@ -50,7 +50,7 @@
     </div>
 
     <!-- Formulaire de changement -->
-    <form method="post" class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 space-y-4">
+    <form method="post" class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 space-y-4" x-data="{ selectedTeacher: '{{ session.teacher.id }}' }">
         {% csrf_token %}
         
         <div>
@@ -65,7 +65,7 @@
                 
                 {% if cohort_teacher %}
                 <label class="flex items-center gap-3 p-3 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition {% if cohort_teacher == session.teacher %}border-blue-500 bg-blue-50{% else %}border-gray-200{% endif %}">
-                    <input type="radio" name="teacher_id" value="{{ cohort_teacher.id }}" class="w-4 h-4 text-blue-600 focus:ring-blue-500" {% if cohort_teacher == session.teacher %}checked{% endif %}>
+                    <input type="radio" name="teacher_id" value="{{ cohort_teacher.id }}" x-model="selectedTeacher" class="w-4 h-4 text-blue-600 focus:ring-blue-500" {% if cohort_teacher == session.teacher %}checked{% endif %}>
                     <div class="flex-1">
                         <p class="font-medium text-gray-900">{{ cohort_teacher.get_full_name }}</p>
                         <p class="text-xs text-gray-500">Professeur titulaire</p>
@@ -75,7 +75,7 @@
                 
                 {% if substitute_teacher %}
                 <label class="flex items-center gap-3 p-3 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition {% if substitute_teacher == session.teacher %}border-blue-500 bg-blue-50{% else %}border-gray-200{% endif %}">
-                    <input type="radio" name="teacher_id" value="{{ substitute_teacher.id }}" class="w-4 h-4 text-blue-600 focus:ring-blue-500" {% if substitute_teacher == session.teacher %}checked{% endif %}>
+                    <input type="radio" name="teacher_id" value="{{ substitute_teacher.id }}" x-model="selectedTeacher" class="w-4 h-4 text-blue-600 focus:ring-blue-500" {% if substitute_teacher == session.teacher %}checked{% endif %}>
                     <div class="flex-1">
                         <p class="font-medium text-gray-900">{{ substitute_teacher.get_full_name }}</p>
                         <p class="text-xs text-gray-500">Professeur suppléant</p>
@@ -88,7 +88,7 @@
             <!-- Tous les professeurs -->
             <div class="mt-4">
                 <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Tous les professeurs</p>
-                <select name="teacher_id" id="teacher_id" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                <select name="teacher_id" id="teacher_id" x-model="selectedTeacher" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                     <option value="">-- Sélectionner un professeur --</option>
                     {% for teacher in all_teachers %}
                     <option value="{{ teacher.id }}" {% if teacher == session.teacher %}selected{% endif %}>
@@ -112,29 +112,4 @@
     </form>
 
 </div>
-
-<script>
-// Sync radio buttons with select dropdown
-document.addEventListener('DOMContentLoaded', function() {
-    const select = document.getElementById('teacher_id');
-    const radios = document.querySelectorAll('input[type="radio"][name="teacher_id"]');
-    
-    // When select changes, update radio
-    select.addEventListener('change', function() {
-        radios.forEach(radio => {
-            radio.checked = radio.value === select.value;
-        });
-    });
-    
-    // When radio changes, update select
-    radios.forEach(radio => {
-        radio.addEventListener('change', function() {
-            if (this.checked) {
-                select.value = this.value;
-            }
-        });
-    });
-});
-</script>
-
 {% endblock %}

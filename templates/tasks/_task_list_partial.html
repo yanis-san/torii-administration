@@ -78,8 +78,10 @@
                             
                             <!-- Badge de catégorie -->
                             {% if task.category %}
-                            <span class="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full mt-1" 
-                                  style="background-color: {{ task.category.color }}22; color: {{ task.category.color }}; border: 1px solid {{ task.category.color }}55;">
+                                <span class="task-category-chip inline-flex items-center px-2 py-1 text-xs font-medium rounded-full mt-1"
+                                    data-category-color="{{ task.category.color }}"
+                                    data-category-bg-alpha="0.13"
+                                    data-category-border-alpha="0.33">
                                 📁 {{ task.category.name }}
                             </span>
                             {% endif %}

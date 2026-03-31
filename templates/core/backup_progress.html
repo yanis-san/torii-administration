@@ -19,13 +19,13 @@
             hx-swap="innerHTML">
             
             <!-- Barre de progression -->
-            <div class="progress bg-gray-200 rounded-full h-2 overflow-hidden mb-3" 
+            <div class="backup-progress-track bg-gray-200 rounded-full h-2 overflow-hidden mb-3"
                  role="progressbar" 
                  aria-valuemin="0" 
                  aria-valuemax="100" 
                  aria-valuenow="0" 
                  aria-labelledby="pblabel">
-                <div id="pb" class="progress-bar bg-blue-600 h-full" style="width: 0%; transition: width 0.6s ease;">
+                <div id="pb" class="backup-progress-bar bg-blue-600 h-full" data-progress-width="0">
                 </div>
             </div>
             
@@ -35,18 +35,3 @@
     </div>
 </div>
 
-<style>
-    .progress {
-        height: 8px;
-        background-color: #e5e7eb;
-        border-radius: 9999px;
-        overflow: hidden;
-    }
-    
-    .progress-bar {
-        height: 100%;
-        background: linear-gradient(90deg, #3b82f6, #60a5fa);
-        transition: width 0.6s ease;
-        box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
-    }
-</style>

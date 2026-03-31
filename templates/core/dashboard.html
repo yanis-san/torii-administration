@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block content %}
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-6 gap-4">
@@ -35,6 +36,125 @@
             <p class="text-xs text-green-600 font-medium">Cours (mois)</p>
             <h3 class="text-2xl font-bold text-green-800">{{ completed_this_month }}</h3>
         </div>
+    </div>
+
+    <!-- SÉANCE PROF EN ACCÈS DIRECT -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-100 mb-6 p-4 sm:p-5">
+        <div class="flex items-start justify-between gap-3 mb-3">
+            <div>
+                <h3 class="font-bold text-gray-800">🎯 Votre séance du jour</h3>
+                <p class="text-xs text-gray-500">Accès rapide dès connexion</p>
+            </div>
+            {% if featured_session %}
+                {% if featured_session.status == 'SCHEDULED' %}
+                    <a href="{% url 'academics:session_detail' featured_session.id %}" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition whitespace-nowrap">
+                        Faire l'appel
+                    </a>
+                {% else %}
+                    <a href="{% url 'academics:session_detail' featured_session.id %}" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg text-xs font-semibold transition whitespace-nowrap">
+                        Ouvrir
+                    </a>
+                {% endif %}
+            {% endif %}
+        </div>
+
+        {% if featured_session %}
+            <div class="rounded-lg border border-blue-200 bg-blue-50 p-3 sm:p-4">
+                <div class="flex items-center justify-between gap-3">
+                    <p class="text-sm font-semibold text-blue-900">
+                        {{ featured_session.start_time|time:"H:i" }} - {{ featured_session.end_time|time:"H:i" }} • {{ featured_session.cohort.name }}
+                    </p>
+                    {% if featured_timing == 'LIVE' %}
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-green-100 text-green-800 whitespace-nowrap">En cours</span>
+                    {% elif featured_timing == 'UPCOMING' and featured_in_minutes != None %}
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-indigo-100 text-indigo-800 whitespace-nowrap">Dans {{ featured_in_minutes }} min</span>
+                    {% endif %}
+                </div>
+                <p class="text-xs text-blue-700 mt-1">
+                    {{ featured_session.classroom.name }}
+                    <span class="mx-1">•</span>
+                    Statut: {{ featured_session.status }}
+                </p>
+                <div class="mt-3 flex flex-wrap gap-2">
+                    {% if featured_session.status == 'SCHEDULED' %}
+                        <form method="post" action="{% url 'academics:postpone_session' featured_session.id %}" data-confirm="Reporter cette séance ?\n\nUn rattrapage sera ajouté automatiquement à la fin du planning.">
+                            {% csrf_token %}
+                            <button type="submit" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-100 text-amber-800 hover:bg-amber-200 transition">
+                                Reporter
+                            </button>
+                        </form>
+                    {% elif featured_session.status == 'POSTPONED' %}
+                        <form method="post" action="{% url 'academics:cancel_postpone' featured_session.id %}" data-confirm="Annuler le report de cette séance ?\n\nLa séance reviendra en Prévu et le rattrapage sera supprimé.">
+                            {% csrf_token %}
+                            <button type="submit" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-100 text-blue-800 hover:bg-blue-200 transition">
+                                Annuler le report
+                            </button>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+        {% else %}
+            <div class="rounded-lg border border-gray-200 bg-gray-50 p-3 sm:p-4 text-sm text-gray-600">
+                Aucune séance aujourd'hui.
+            </div>
+        {% endif %}
+
+        <div class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+            <div class="rounded border border-gray-200 p-2 bg-white">
+                <p class="font-semibold text-gray-700 mb-0.5">Précédente</p>
+                {% if previous_session %}
+                    <p class="text-gray-600">{{ previous_session.date|date:"d/m" }} • {{ previous_session.start_time|time:"H:i" }} • {{ previous_session.cohort.name }}</p>
+                {% else %}
+                    <p class="text-gray-400">—</p>
+                {% endif %}
+            </div>
+            <div class="rounded border border-gray-200 p-2 bg-white">
+                <p class="font-semibold text-gray-700 mb-0.5">Prochaine</p>
+                {% if next_session %}
+                    <p class="text-gray-600">{{ next_session.date|date:"d/m" }} • {{ next_session.start_time|time:"H:i" }} • {{ next_session.cohort.name }}</p>
+                {% else %}
+                    <p class="text-gray-400">—</p>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if other_today_sessions %}
+        <div class="mt-3">
+            <p class="text-[11px] font-semibold text-gray-500 mb-2">Autres séances aujourd'hui</p>
+            <div class="flex gap-2 overflow-x-auto pb-1">
+                {% for s in other_today_sessions %}
+                <a href="{% url 'academics:session_detail' s.id %}" class="min-w-[180px] rounded border border-gray-200 bg-white p-2 hover:border-blue-300 hover:bg-blue-50 transition">
+                    <p class="text-xs font-semibold text-gray-800">{{ s.start_time|time:"H:i" }} - {{ s.end_time|time:"H:i" }}</p>
+                    <p class="text-[11px] text-gray-600 truncate">{{ s.cohort.name }}</p>
+                </a>
+                {% endfor %}
+            </div>
+            <div class="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {% for s in other_today_sessions %}
+                <div class="rounded border border-gray-200 bg-white p-2 flex items-center justify-between gap-2">
+                    <p class="text-[11px] text-gray-600 truncate">{{ s.start_time|time:"H:i" }} • {{ s.cohort.name }}</p>
+                    <div class="flex gap-1">
+                        {% if s.status == 'SCHEDULED' %}
+                        <form method="post" action="{% url 'academics:postpone_session' s.id %}" data-confirm="Reporter cette séance ?\n\nUn rattrapage sera ajouté automatiquement à la fin du planning.">
+                            {% csrf_token %}
+                            <button type="submit" class="px-2 py-1 rounded text-[11px] font-semibold bg-amber-100 text-amber-800 hover:bg-amber-200 transition">
+                                Reporter
+                            </button>
+                        </form>
+                        {% elif s.status == 'POSTPONED' %}
+                        <form method="post" action="{% url 'academics:cancel_postpone' s.id %}" data-confirm="Annuler le report de cette séance ?\n\nLa séance reviendra en Prévu et le rattrapage sera supprimé.">
+                            {% csrf_token %}
+                            <button type="submit" class="px-2 py-1 rounded text-[11px] font-semibold bg-blue-100 text-blue-800 hover:bg-blue-200 transition">
+                                Annuler
+                            </button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
     </div>
 
     <!-- MES CLASSES -->
@@ -78,7 +198,7 @@
         <form method="get" class="flex flex-col sm:flex-row gap-2 sm:gap-3 items-start sm:items-end">
             <div class="flex-1">
                 <label class="text-xs font-medium text-gray-600 block mb-1">Année Académique</label>
-                <select name="year" onchange="this.form.submit()" class="w-full px-2 py-1 border border-gray-300 rounded text-xs">
+                <select name="year" data-auto-submit="true" class="w-full px-2 py-1 border border-gray-300 rounded text-xs">
                     {% for year in all_academic_years %}
                     <option value="{{ year.id }}" {% if selected_year.id == year.id %}selected{% endif %}>{{ year.label }}</option>
                     {% endfor %}
@@ -95,7 +215,7 @@
                 <!-- Filtre Année Académique -->
                 <div class="flex-1">
                     <label class="block text-xs font-semibold text-gray-600 mb-1">📅 Année Académique</label>
-                    <select id="yearFilter" onchange="updateDashboard()" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <select id="yearFilter" data-dashboard-filter="true" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                         {% for year in all_academic_years %}
                         <option value="{{ year.id }}" {% if year.id == selected_year.id %}selected{% endif %}>
                             {{ year.start_date|date:"Y" }}-{{ year.end_date|date:"Y" }}
@@ -107,7 +227,7 @@
                 <!-- Filtre Langue -->
                 <div class="flex-1">
                     <label class="block text-xs font-semibold text-gray-600 mb-1">🗣️ Filtre Langue</label>
-                    <select id="languageFilter" onchange="updateDashboard()" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <select id="languageFilter" data-dashboard-filter="true" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                         <option value="">📊 Toutes les Langues</option>
                         {% for lang in all_languages %}
                         <option value="{{ lang.id }}" {% if lang.id|stringformat:"s" == filter_language %}selected{% endif %}>
@@ -120,7 +240,7 @@
                 <!-- Filtre Modalité -->
                 <div class="flex-1">
                     <label class="block text-xs font-semibold text-gray-600 mb-1">🏠 Modalité</label>
-                    <select id="modalityFilter" onchange="updateDashboard()" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <select id="modalityFilter" data-dashboard-filter="true" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                         <option value="">📊 Toutes les Modalités</option>
                         <option value="IN_PERSON" {% if filter_modality == 'IN_PERSON' %}selected{% endif %}>🏫 Présentiel</option>
                         <option value="ONLINE" {% if filter_modality == 'ONLINE' %}selected{% endif %}>💻 En Ligne</option>
@@ -130,7 +250,7 @@
                 <!-- Filtre Type -->
                 <div class="flex-1">
                     <label class="block text-xs font-semibold text-gray-600 mb-1">👥 Type</label>
-                    <select id="typeFilter" onchange="updateDashboard()" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <select id="typeFilter" data-dashboard-filter="true" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                         <option value="">📊 Tous les Types</option>
                         <option value="group" {% if filter_type == 'group' %}selected{% endif %}>👥 Groupe</option>
                         <option value="individual" {% if filter_type == 'individual' %}selected{% endif %}>👤 Individuel</option>
@@ -138,7 +258,7 @@
                 </div>
             </div>
             
-            <button onclick="resetFilters()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300 transition whitespace-nowrap">
+            <button type="button" data-dashboard-reset="true" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300 transition whitespace-nowrap">
                 🔄 Réinitialiser
             </button>
         </div>
@@ -148,21 +268,21 @@
     <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-4 mb-4">
         <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
             <div class="flex flex-wrap gap-2">
-                <button onclick="switchPeriod('month')" class="period-btn active px-4 py-2 rounded-lg font-medium text-sm transition" data-period="month">
+                <button type="button" data-dashboard-period="month" class="period-btn active px-4 py-2 rounded-lg font-medium text-sm transition" data-period="month">
                     📅 Par Mois
                 </button>
-                <button onclick="switchPeriod('quarter')" class="period-btn px-4 py-2 rounded-lg font-medium text-sm transition" data-period="quarter">
+                <button type="button" data-dashboard-period="quarter" class="period-btn px-4 py-2 rounded-lg font-medium text-sm transition" data-period="quarter">
                     📊 Par Trimestre
                 </button>
-                <button onclick="switchPeriod('year')" class="period-btn px-4 py-2 rounded-lg font-medium text-sm transition" data-period="year">
+                <button type="button" data-dashboard-period="year" class="period-btn px-4 py-2 rounded-lg font-medium text-sm transition" data-period="year">
                     📈 Année Complète
                 </button>
             </div>
             <div class="flex gap-2">
-                <button onclick="toggleChart('revenueDetail')" class="px-3 py-2 rounded text-xs font-medium bg-green-100 text-green-700 hover:bg-green-200 transition">
+                <button type="button" data-dashboard-toggle="revenueDetail" class="px-3 py-2 rounded text-xs font-medium bg-green-100 text-green-700 hover:bg-green-200 transition">
                     💰 Détails Revenus
                 </button>
-                <button onclick="toggleChart('feesDetail')" class="px-3 py-2 rounded text-xs font-medium bg-amber-100 text-amber-700 hover:bg-amber-200 transition">
+                <button type="button" data-dashboard-toggle="feesDetail" class="px-3 py-2 rounded text-xs font-medium bg-amber-100 text-amber-700 hover:bg-amber-200 transition">
                     🎓 Détails Frais
                 </button>
             </div>
@@ -282,419 +402,19 @@
         </div>
     </div>
 
-    {% load static %}
+    <div id="dashboard-data"
+         data-monthly="{{ monthly_breakdown|safe|escapejs }}"
+         data-quarterly="{{ quarterly_data|safe|escapejs }}"
+         data-registration-fees="{{ registration_fees_total }}"
+         data-academic-income="{{ academic_year_income }}"
+            data-paid-registrations="{{ paid_registrations_count }}"
+         data-languages-income="{{ languages_income|safe|escapejs }}"
+         data-modality-income="{{ modality_income|safe|escapejs }}"
+         data-type-income="{{ type_income|safe|escapejs }}"
+         data-selected-year-id="{% if selected_year %}{{ selected_year.id }}{% endif %}">
+    </div>
     <script src="{% static 'js/chart.umd.js' %}"></script>
-    <script>
-    // ============ DONNÉES GLOBALES ============
-    const monthlyData = {{ monthly_breakdown|safe }};
-    const quarterlyData = {{ quarterly_data|safe }};
-    const registrationFees = {{ registration_fees_total }};
-    const academicIncome = {{ academic_year_income }};
-    const languagesIncome = {{ languages_income|safe }};
-    const modalityIncome = {{ modality_income|safe }};
-    const typeIncome = {{ type_income|safe }};
-    
-    const monthlyDataObj = {};
-    const quartValues = {};
-    
-    // Parse monthly data
-    monthlyData.forEach(d => {
-        monthlyDataObj[d.name] = d.value;
-    });
-    
-    // Parse quarterly data
-    Object.keys(quarterlyData).forEach(q => {
-        quartValues[q] = quarterlyData[q];
-    });
-
-    // ============ CONFIGURATION GLOBALE CHART.JS ============
-    const globalOptions = {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            legend: {
-                display: true,
-                position: 'bottom',
-                labels: {
-                    font: { size: 12 },
-                    padding: 15,
-                    usePointStyle: true,
-                    color: '#666'
-                }
-            },
-            tooltip: {
-                backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                padding: 12,
-                titleFont: { size: 12, weight: 'bold' },
-                bodyFont: { size: 11 },
-                callbacks: {
-                    label: function(context) {
-                        const label = context.dataset.label || '';
-                        const value = context.parsed.y || context.parsed;
-                        return label + ': ' + value.toLocaleString('fr-DZ') + ' DZD';
-                    }
-                }
-            }
-        },
-        scales: {
-            y: {
-                beginAtZero: true,
-                ticks: {
-                    callback: (value) => value.toLocaleString('fr-DZ') + ' DZD',
-                    color: '#666',
-                    font: { size: 11 }
-                },
-                grid: { color: '#f0f0f0' }
-            },
-            x: {
-                grid: { display: false },
-                ticks: { color: '#666', font: { size: 10 } }
-            }
-        }
-    };
-
-    // ============ INSTANCES CHART.JS ============
-    let monthlyChart, quarterlyChart, comparisonChart, languageChart, modalityChart, typeChart;
-
-    // ============ FONCTION : METTRE À JOUR LE DASHBOARD ============
-    function updateDashboard() {
-        const yearId = document.getElementById('yearFilter').value;
-        const langId = document.getElementById('languageFilter').value;
-        const modality = document.getElementById('modalityFilter').value;
-        const type = document.getElementById('typeFilter').value;
-        
-        let url = new URL(window.location.href);
-        url.searchParams.set('year', yearId);
-        if (langId) url.searchParams.set('language', langId);
-        else url.searchParams.delete('language');
-        if (modality) url.searchParams.set('modality', modality);
-        else url.searchParams.delete('modality');
-        if (type) url.searchParams.set('type', type);
-        else url.searchParams.delete('type');
-        
-        window.location.href = url.toString();
-    }
-
-    // ============ FONCTION : RÉINITIALISER LES FILTRES ============
-    function resetFilters() {
-        document.getElementById('yearFilter').value = '{{ selected_year.id }}';
-        document.getElementById('languageFilter').value = '';
-        document.getElementById('modalityFilter').value = '';
-        document.getElementById('typeFilter').value = '';
-        updateDashboard();
-    }
-
-    // ============ FONCTION : CHANGER LA PÉRIODE ============
-    function switchPeriod(period) {
-        // Mettre à jour les boutons actifs
-        document.querySelectorAll('.period-btn').forEach(btn => btn.classList.remove('active', 'bg-blue-600', 'text-white'));
-        document.querySelectorAll('.period-btn').forEach(btn => {
-            btn.classList.add('bg-gray-100', 'text-gray-700');
-            if (btn.dataset.period === period) {
-                btn.classList.add('active', 'bg-blue-600', 'text-white');
-            }
-        });
-
-        // Changer le label du graphique
-        const labels = {
-            'month': 'Mois',
-            'quarter': 'Trimestre',
-            'year': 'Année'
-        };
-        document.getElementById('period-label').textContent = labels[period];
-
-        // Afficher/Masquer les graphiques appropriés
-        document.getElementById('monthlyChartContainer').style.display = period === 'month' ? 'block' : 'none';
-        document.getElementById('quarterlyChartContainer').style.display = period === 'quarter' ? 'block' : 'none';
-
-        if (period === 'month') {
-            setTimeout(() => monthlyChart.resize(), 100);
-        } else if (period === 'quarter') {
-            setTimeout(() => quarterlyChart.resize(), 100);
-        }
-    }
-
-    // ============ FONCTION : TOGGLE DÉTAILS ============
-    function toggleChart(id) {
-        const element = document.getElementById(id);
-        element.classList.toggle('hidden');
-
-        // Calculer les statistiques si le détail des revenus est affiché
-        if (id === 'revenueDetail' && !element.classList.contains('hidden')) {
-            calculateRevenueStats();
-        }
-
-        // Calculer les statistiques si le détail des frais est affiché
-        if (id === 'feesDetail' && !element.classList.contains('hidden')) {
-            calculateFeesStats();
-        }
-    }
-
-    // ============ FONCTION : CALCULER STATS REVENUS ============
-    function calculateRevenueStats() {
-        const values = Object.values(monthlyDataObj);
-        const maxValue = Math.max(...values);
-        const maxMonth = Object.keys(monthlyDataObj)[Object.values(monthlyDataObj).indexOf(maxValue)];
-        const firstVal = values[0] || 0;
-        const lastVal = values[values.length - 1] || 0;
-        const growth = firstVal > 0 ? (((lastVal - firstVal) / firstVal) * 100).toFixed(1) : 0;
-
-        document.getElementById('bestMonth').textContent = maxMonth + ' (' + maxValue.toLocaleString('fr-DZ') + ' DZD)';
-        document.getElementById('growth').textContent = (growth >= 0 ? '+' : '') + growth + '%';
-    }
-
-    // ============ FONCTION : CALCULER STATS FRAIS ============
-    function calculateFeesStats() {
-        const paidCount = {{ paid_registrations_count }};
-        const totalStudents = paidCount + Math.max(1, Math.ceil(paidCount * 0.15));
-
-        document.getElementById('unpaidCount').textContent = (totalStudents - paidCount);
-        document.getElementById('collectRate').textContent = paidCount > 0 ? ((paidCount / totalStudents) * 100).toFixed(1) : '0';
-    }
-
-    // ============ CRÉER GRAPHIQUES INITIAUX ============
-    function initCharts() {
-        // === GRAPHIQUE MENSUEL ===
-        const monthlyCtx = document.getElementById('monthlyChart').getContext('2d');
-        monthlyChart = new Chart(monthlyCtx, {
-            type: 'line',
-            data: {
-                labels: Object.keys(monthlyDataObj),
-                datasets: [{
-                    label: 'Revenus',
-                    data: Object.values(monthlyDataObj),
-                    borderColor: '#10b981',
-                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                    borderWidth: 3,
-                    fill: true,
-                    pointRadius: 5,
-                    pointBackgroundColor: '#10b981',
-                    pointHoverRadius: 7,
-                    pointBorderColor: '#fff',
-                    pointBorderWidth: 2,
-                    tension: 0.4
-                }]
-            },
-            options: {
-                ...globalOptions,
-                onClick: (event, elements) => {
-                    if (elements.length > 0) {
-                        const monthIdx = elements[0].index;
-                        const monthName = Object.keys(monthlyDataObj)[monthIdx];
-                        const value = Object.values(monthlyDataObj)[monthIdx];
-                        alert(`📊 ${monthName}\nRevenus: ${value.toLocaleString('fr-DZ')} DZD`);
-                    }
-                }
-            }
-        });
-
-        // === GRAPHIQUE TRIMESTRIEL ===
-        const quarterlyCtx = document.getElementById('quarterlyChart').getContext('2d');
-        quarterlyChart = new Chart(quarterlyCtx, {
-            type: 'bar',
-            data: {
-                labels: Object.keys(quartValues),
-                datasets: [{
-                    label: 'Revenus par Trimestre',
-                    data: Object.values(quartValues),
-                    backgroundColor: [
-                        'rgba(59, 130, 246, 0.7)',   // Q1 - Bleu
-                        'rgba(34, 197, 94, 0.7)',    // Q2 - Vert
-                        'rgba(245, 158, 11, 0.7)',   // Q3 - Orange
-                        'rgba(168, 85, 247, 0.7)'    // Q4 - Violet
-                    ],
-                    borderColor: [
-                        'rgb(59, 130, 246)',
-                        'rgb(34, 197, 94)',
-                        'rgb(245, 158, 11)',
-                        'rgb(168, 85, 247)'
-                    ],
-                    borderWidth: 2,
-                    borderRadius: 6
-                }]
-            },
-            options: {
-                ...globalOptions,
-                onClick: (event, elements) => {
-                    if (elements.length > 0) {
-                        const qIdx = elements[0].index;
-                        const quarters = Object.keys(quartValues);
-                        const qName = quarters[qIdx];
-                        const value = Object.values(quartValues)[qIdx];
-                        alert(`📊 ${qName}\nRevenus: ${value.toLocaleString('fr-DZ')} DZD`);
-                    }
-                }
-            }
-        });
-
-        // === GRAPHIQUE COMPARAISON FRAIS + REVENUS ===
-        const comparisonCtx = document.getElementById('comparisonChart').getContext('2d');
-        comparisonChart = new Chart(comparisonCtx, {
-            type: 'bar',
-            data: {
-                labels: ['Frais', 'Revenus Cours'],
-                datasets: [{
-                    label: 'Collecté (DZD)',
-                    data: [registrationFees, academicIncome],
-                    backgroundColor: [
-                        'rgba(251, 191, 36, 0.7)',    // Frais - Jaune
-                        'rgba(52, 211, 153, 0.7)'     // Revenus - Vert
-                    ],
-                    borderColor: [
-                        'rgb(251, 191, 36)',
-                        'rgb(52, 211, 153)'
-                    ],
-                    borderWidth: 2,
-                    borderRadius: 6
-                }]
-            },
-            options: {
-                ...globalOptions,
-                onClick: (event, elements) => {
-                    if (elements.length > 0) {
-                        const idx = elements[0].index;
-                        const labels = ['Frais d\'inscription', 'Revenus des cours'];
-                        const values = [registrationFees, academicIncome];
-                        alert(`💰 ${labels[idx]}\nMontant: ${values[idx].toLocaleString('fr-DZ')} DZD`);
-                    }
-                }
-            }
-        });
-
-        // === GRAPHIQUE PAR LANGUE ===
-        const languageCtx = document.getElementById('languageChart').getContext('2d');
-        const languageNames = Object.keys(languagesIncome);
-        const languageValues = Object.values(languagesIncome);
-        
-        const languageColors = [
-            'rgba(59, 130, 246, 0.7)',
-            'rgba(34, 197, 94, 0.7)',
-            'rgba(245, 158, 11, 0.7)',
-            'rgba(239, 68, 68, 0.7)',
-            'rgba(168, 85, 247, 0.7)',
-            'rgba(236, 72, 153, 0.7)',
-            'rgba(14, 165, 233, 0.7)',
-            'rgba(34, 197, 94, 0.7)',
-            'rgba(251, 146, 60, 0.7)',
-            'rgba(107, 114, 128, 0.7)'
-        ];
-
-        languageChart = new Chart(languageCtx, {
-            type: 'bar',
-            data: {
-                labels: languageNames,
-                datasets: [{
-                    label: 'Revenus par Langue',
-                    data: languageValues,
-                    backgroundColor: languageColors.slice(0, languageNames.length),
-                    borderColor: languageColors.map(c => c.replace('0.7', '1')).slice(0, languageNames.length),
-                    borderWidth: 2,
-                    borderRadius: 6
-                }]
-            },
-            options: {
-                ...globalOptions,
-                indexAxis: 'y',  // Barres horizontales pour meilleure lisibilité
-                onClick: (event, elements) => {
-                    if (elements.length > 0) {
-                        const idx = elements[0].index;
-                        const langName = languageNames[idx];
-                        const value = languageValues[idx];
-                        alert(`🗣️ ${langName}\nRevenus: ${value.toLocaleString('fr-DZ')} DZD`);
-                    }
-                }
-            }
-        });
-
-        // === GRAPHIQUE MODALITÉ ===
-        const modalityCtx = document.getElementById('modalityChart').getContext('2d');
-        const modalityNames = Object.keys(modalityIncome);
-        const modalityValues = Object.values(modalityIncome);
-
-        modalityChart = new Chart(modalityCtx, {
-            type: 'bar',
-            data: {
-                labels: modalityNames,
-                datasets: [{
-                    label: 'Revenus',
-                    data: modalityValues,
-                    backgroundColor: [
-                        'rgba(59, 130, 246, 0.7)',
-                        'rgba(34, 197, 94, 0.7)'
-                    ],
-                    borderColor: [
-                        'rgb(59, 130, 246)',
-                        'rgb(34, 197, 94)'
-                    ],
-                    borderWidth: 2,
-                    borderRadius: 6
-                }]
-            },
-            options: {
-                ...globalOptions,
-                onClick: (event, elements) => {
-                    if (elements.length > 0) {
-                        const idx = elements[0].index;
-                        const name = modalityNames[idx];
-                        const value = modalityValues[idx];
-                        alert(`🏠 ${name}\nRevenus: ${value.toLocaleString('fr-DZ')} DZD`);
-                    }
-                }
-            }
-        });
-
-        // === GRAPHIQUE TYPE ===
-        const typeCtx = document.getElementById('typeChart').getContext('2d');
-        const typeNames = Object.keys(typeIncome);
-        const typeValues = Object.values(typeIncome);
-
-        typeChart = new Chart(typeCtx, {
-            type: 'bar',
-            data: {
-                labels: typeNames,
-                datasets: [{
-                    label: 'Revenus',
-                    data: typeValues,
-                    backgroundColor: [
-                        'rgba(168, 85, 247, 0.7)',
-                        'rgba(239, 68, 68, 0.7)'
-                    ],
-                    borderColor: [
-                        'rgb(168, 85, 247)',
-                        'rgb(239, 68, 68)'
-                    ],
-                    borderWidth: 2,
-                    borderRadius: 6
-                }]
-            },
-            options: {
-                ...globalOptions,
-                onClick: (event, elements) => {
-                    if (elements.length > 0) {
-                        const idx = elements[0].index;
-                        const name = typeNames[idx];
-                        const value = typeValues[idx];
-                        alert(`👥 ${name}\nRevenus: ${value.toLocaleString('fr-DZ')} DZD`);
-                    }
-                }
-            }
-        });
-    }
-
-    // ============ INITIALISATION ============
-    document.addEventListener('DOMContentLoaded', function() {
-        initCharts();
-        
-        // Style des boutons de période au chargement
-        document.querySelectorAll('.period-btn').forEach(btn => {
-            btn.classList.add('bg-gray-100', 'text-gray-700');
-            if (btn.dataset.period === 'month') {
-                btn.classList.remove('bg-gray-100', 'text-gray-700');
-                btn.classList.add('active', 'bg-blue-600', 'text-white');
-            }
-        });
-    });
-    </script>
+    <script src="{% static 'js/core/dashboard.js' %}"></script>
     {% endif %}
 
     <!-- PLANNING DU JOUR (pour tous) -->

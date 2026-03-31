@@ -14,6 +14,17 @@ class User(AbstractUser):
         verbose_name="Photo de profil"
     )
 
+    def save(self, *args, **kwargs):
+        from core.image_utils import compress_image
+        try:
+            this = User.objects.get(id=self.id)
+            if this.profile_picture != self.profile_picture:
+                self.profile_picture = compress_image(self.profile_picture, max_width=500)
+        except User.DoesNotExist:
+            if self.profile_picture:
+                self.profile_picture = compress_image(self.profile_picture, max_width=500)
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f"{self.first_name} {self.last_name} ({self.username})"
 

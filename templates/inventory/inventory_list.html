@@ -1,5 +1,4 @@
 {% extends 'base.html' %}
-{% load static %}
 
 {% block title %}Articles en Inventaire{% endblock %}
 
@@ -99,8 +98,9 @@
                             <tr class="hover:bg-gray-50 transition">
                                 <td class="px-4 py-3 text-sm font-medium text-gray-900">{{ item.name }}</td>
                                 <td class="px-4 py-3 text-sm text-gray-600">
-                                    <span class="inline-flex items-center px-2 py-1 rounded text-xs font-bold"
-                                          style="background-color: {{ item.category.color }}20; color: {{ item.category.color }}">
+                                    <span x-data="{ color: '{{ item.category.color }}' }" :style="'background-color:' + color + '20; color:' + color"
+                                          class="inventory-category-chip inline-flex items-center px-2 py-1 rounded text-xs font-bold"
+                                          data-category-color="{{ item.category.color }}">
                                         {{ item.category.name }}
                                     </span>
                                 </td>

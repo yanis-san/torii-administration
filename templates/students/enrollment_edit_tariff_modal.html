@@ -1,16 +1,26 @@
 {% load finance_filters %}
-<div id="modal-edit-tariff" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/students/enrollment_edit_tariff_modal.css' %}">
+<div id="modal-edit-tariff" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 enrollment-edit-tariff-modal"
+     x-data="{
+         closeModal() {
+             this.$el.classList.add('is-closing');
+             window.setTimeout(() => this.$el.remove(), 200);
+         }
+     }"
+     @click.self="closeModal()"
+     @keydown.window.escape="closeModal()">
     <div class="bg-white rounded-xl shadow-2xl max-w-md w-full max-h-screen overflow-y-auto">
         <div class="sticky top-0 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white p-6 border-b border-indigo-800">
             <div class="flex items-center justify-between">
                 <h2 class="text-xl font-bold">Modifier le tarif</h2>
-                <button type="button" onclick="closeModal()" class="text-indigo-200 hover:text-white text-2xl leading-none">×</button>
+                <button type="button" @click.prevent="closeModal()" class="text-indigo-200 hover:text-white text-2xl leading-none">×</button>
             </div>
             <p class="text-sm text-indigo-100 mt-1">{{ enrollment.student.last_name }} {{ enrollment.student.first_name }} - {{ enrollment.cohort.name }}</p>
         </div>
 
         <form hx-post="{% url 'students:edit_tariff' enrollment.id %}" 
-              hx-on="htmx:beforeRequest: closeModal()"
+              @htmx:before-request="closeModal()"
               class="p-6">
             {% csrf_token %}
 
@@ -69,7 +79,7 @@
 
             <div class="flex gap-3">
                 <button type="button" 
-                        onclick="closeModal()"
+                        @click.prevent="closeModal()"
                         class="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 font-semibold hover:bg-gray-50 transition">
                     Annuler
                 </button>
@@ -81,31 +91,3 @@
         </form>
     </div>
 </div>
-
-<script>
-function closeModal() {
-    const modal = document.getElementById('modal-edit-tariff');
-    if (modal) {
-        modal.style.opacity = '0';
-        setTimeout(() => modal.remove(), 200);
-    }
-}
-
-// Fermer la modal en cliquant en dehors
-document.getElementById('modal-edit-tariff').addEventListener('click', function(e) {
-    if (e.target === this) {
-        closeModal();
-    }
-});
-</script>
-
-<style>
-#modal-edit-tariff {
-    animation: fadeIn 0.3s ease-in;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-</style>

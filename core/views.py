@@ -1,7 +1,7 @@
 # core/views.py
 from django.shortcuts import render, redirect
 from django.utils import timezone
-from django.db.models import Sum
+from django.db.models import Sum, Q
 from academics.models import CourseSession, Cohort
 from students.models import Enrollment, StudentAnnualFee
 from finance.models import Payment
@@ -33,6 +33,59 @@ def dashboard(request):
             date=today
         ).select_related('cohort', 'classroom', 'teacher').order_by('start_time')
 
+        # Séance mise en avant sur l'accueil prof
+        now_time = timezone.localtime().time()
+        featured_session = None
+        current_session = None
+        next_today_session = None
+        featured_timing = ''
+        featured_in_minutes = None
+
+        for session in todays_sessions:
+            if session.start_time <= now_time <= session.end_time:
+                current_session = session
+                break
+
+        if current_session:
+            featured_session = current_session
+            featured_timing = 'LIVE'
+        else:
+            for session in todays_sessions:
+                if session.start_time >= now_time:
+                    next_today_session = session
+                    break
+            featured_session = next_today_session or (todays_sessions[0] if todays_sessions else None)
+            if next_today_session:
+                featured_timing = 'UPCOMING'
+
+        if featured_session and featured_timing == 'UPCOMING':
+            delta_minutes = int(
+                (
+                    datetime.combine(today, featured_session.start_time)
+                    - datetime.combine(today, now_time)
+                ).total_seconds() // 60
+            )
+            if delta_minutes >= 0:
+                featured_in_minutes = delta_minutes
+
+        anchor_time = featured_session.start_time if featured_session else now_time
+
+        previous_session = CourseSession.objects.filter(
+            teacher=user
+        ).filter(
+            Q(date__lt=today) | Q(date=today, start_time__lt=anchor_time)
+        ).select_related('cohort').order_by('-date', '-start_time').first()
+
+        next_session = CourseSession.objects.filter(
+            teacher=user
+        ).filter(
+            Q(date__gt=today) | Q(date=today, start_time__gt=anchor_time)
+        ).select_related('cohort').order_by('date', 'start_time').first()
+
+        other_today_sessions = [
+            s for s in todays_sessions if not featured_session or s.id != featured_session.id
+        ]
+
         # Ses groupes actifs : cohorts où il est titulaire OU où il a au moins une séance
         cohorts_as_teacher = Cohort.objects.filter(teacher=user)
         cohort_ids_with_sessions = CourseSession.objects.filter(
@@ -59,6 +112,12 @@ def dashboard(request):
         context = {
             'is_teacher': True,
             'sessions': todays_sessions,
+            'featured_session': featured_session,
+            'featured_timing': featured_timing,
+            'featured_in_minutes': featured_in_minutes,
+            'previous_session': previous_session,
+            'next_session': next_session,
+            'other_today_sessions': other_today_sessions,
             'my_cohorts': my_cohorts,
             'total_students': my_total_students,
             'completed_this_month': completed_this_month,

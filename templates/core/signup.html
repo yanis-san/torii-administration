@@ -4,20 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Inscription - Institut Torii</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        .japanese-gradient {
-            background: linear-gradient(135deg,
-                #DC143C 0%,      /* Rouge vif (crimson) */
-                #8B0000 15%,     /* Rouge sombre */
-                #B22222 30%,     /* Firebrick */
-                #FFFFFF 50%,     /* Blanc central */
-                #2C2C2C 70%,     /* Noir grisé */
-                #1a1a1a 85%,     /* Noir profond */
-                #000000 100%     /* Noir pur */
-            );
-        }
-    </style>
+    {% load static %}
+    <script src="{% static 'js/tailwind.min.js' %}"></script>
+    <link rel="stylesheet" href="{% static 'css/core/login.css' %}">
 </head>
 <body class="japanese-gradient min-h-screen flex items-center justify-center p-4 py-8 sm:py-12">
 

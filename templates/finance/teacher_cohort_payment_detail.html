@@ -32,7 +32,7 @@
         {% if teachers_list|length > 1 %}
         <div class="mt-4 pt-4 border-t border-indigo-500">
             <label class="block text-sm text-indigo-100 mb-2">Changer de professeur:</label>
-            <select onchange="window.location.href=this.value" class="px-4 py-2 rounded-lg bg-white text-gray-800 font-medium">
+            <select data-navigate-value="true" class="px-4 py-2 rounded-lg bg-white text-gray-800 font-medium">
                 {% for t in teachers_list %}
                 <option value="?teacher={{ t.teacher.id }}{% if period_start %}&start={{ period_start|date:'Y-m-d' }}{% endif %}{% if period_end %}&end={{ period_end|date:'Y-m-d' }}{% endif %}"
                         {% if t.teacher.id == teacher.id %}selected{% endif %}>

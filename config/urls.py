@@ -29,8 +29,12 @@ urlpatterns = [
     path('emails/', include('emails.urls')),
     path('inventory/', include('inventory.urls')),
     path('tasks/', include('tasks.urls')),
+    path('certificates/', include('certificate.urls')),
 ]
 
-# Serve media files in development
-if settings.DEBUG:
+# Serve media files in development and optionally in production (fallback mode)
+if settings.DEBUG or getattr(settings, 'SERVE_MEDIA_WITH_DJANGO', False):
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+if settings.DEBUG:
+    urlpatterns += [path('__reload__/', include('django_browser_reload.urls'))]

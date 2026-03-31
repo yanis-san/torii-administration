@@ -49,6 +49,20 @@ class Payment(models.Model):
 
     recorded_by = models.ForeignKey(User, on_delete=models.PROTECT)
 
+    def save(self, *args, **kwargs):
+        from core.image_utils import compress_image
+        # Check if receipt is an image
+        if self.receipt and hasattr(self.receipt, 'name'):
+            ext = self.receipt.name.split('.')[-1].lower()
+            if ext in ['jpg', 'jpeg', 'png', 'webp']:
+                try:
+                    this = Payment.objects.get(id=self.id)
+                    if this.receipt != self.receipt:
+                        self.receipt = compress_image(self.receipt, max_width=1200)
+                except Payment.DoesNotExist:
+                    self.receipt = compress_image(self.receipt, max_width=1200)
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f"{self.amount:,} DA - {self.enrollment}".replace(',', ' ')
 

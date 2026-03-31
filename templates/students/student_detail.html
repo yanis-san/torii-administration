@@ -1,17 +1,67 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Profil : {{ student.first_name }} {{ student.last_name }}{% endblock %}
 
 {% block content %}
-<div class="space-y-6">
+<div class="space-y-6"
+     x-data="{
+        annualFeeModalOpen: false,
+        annualFeeAction: 'mark_paid',
+        annualFeeStudentId: null,
+        paymentDate: '',
+        openAnnualFeeModal(studentId, isPaid) {
+            this.annualFeeAction = isPaid ? 'mark_unpaid' : 'mark_paid';
+            this.annualFeeStudentId = studentId;
+            this.paymentDate = new Date().toISOString().split('T')[0];
+            this.annualFeeModalOpen = true;
+        },
+        closeAnnualFeeModal() {
+            this.annualFeeModalOpen = false;
+        },
+        async submitAnnualFee() {
+            if (!this.annualFeeStudentId) {
+                return;
+            }
+
+            const payload = {
+                action: this.annualFeeAction,
+                payment_date: this.annualFeeAction === 'mark_paid' ? (this.paymentDate || null) : null
+            };
+
+            try {
+                const response = await fetch(`/students/${this.annualFeeStudentId}/toggle-annual-fee/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.body?.dataset?.csrfToken || '',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    this.closeAnnualFeeModal();
+                    window.location.reload();
+                    return;
+                }
+
+                window.alert('Erreur: ' + (data.error || 'Impossible de modifier le statut'));
+            } catch (error) {
+                window.alert('Erreur lors de la modification du statut');
+            }
+        }
+     }"
+     @keydown.window.alt.a.prevent="$refs.newEnrollmentDetailBtn?.click()"
+     @keydown.window.ctrl.m.prevent="$refs.editStudentBtn?.click()"
+     @keydown.window.escape="if (annualFeeModalOpen) closeAnnualFeeModal()">
 
     <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 sm:p-6">
         <div class="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
             {% if student.profile_picture %}
                 <img src="{{ student.profile_picture.url }}"
                      alt="{{ student.first_name }} {{ student.last_name }}"
-                     class="w-24 h-32 sm:w-28 sm:h-36 rounded-lg object-cover border border-gray-200"
-                     style="object-position: center top;">
+                     class="w-24 h-32 sm:w-28 sm:h-36 rounded-lg object-cover object-top border border-gray-200">
             {% else %}
                 <div class="w-24 h-32 sm:w-28 sm:h-36 rounded-lg bg-gray-100 text-gray-700 flex items-center justify-center font-bold text-2xl border border-gray-200">
                     {{ student.first_name|slice:":1" }}{{ student.last_name|slice:":1" }}
@@ -29,8 +79,8 @@
                     {% endif %}
                     {% if current_academic_year %}
                         <div>
-                            <span id="annual-fee-badge" class="text-xs font-bold px-2 py-0.5 rounded cursor-pointer hover:opacity-80 transition border border-gray-200 bg-gray-50 text-gray-800"
-                                  onclick="openAnnualFeeModal({{ student.id }})"
+                                <span id="annual-fee-badge" class="text-xs font-bold px-2 py-0.5 rounded cursor-pointer hover:opacity-80 transition border border-gray-200 bg-gray-50 text-gray-800"
+                                    @click="openAnnualFeeModal({{ student.id }}, {% if annual_fee_paid %}true{% else %}false{% endif %})"
                                   title="Cliquer pour modifier le statut de paiement">
                                 {% if annual_fee_paid %}
                                     <span class="bg-emerald-100 text-emerald-900 px-2 py-0.5 rounded">✓ Frais {{ current_academic_year.label }}: Payé ({{ student_annual_fee.amount }} DA)</span>
@@ -48,11 +98,11 @@
                 </div>
             </div>
             <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
-                <button id="edit-student-btn" hx-get="{% url 'students:edit' student.id %}" hx-target="body" hx-swap="beforeend"
+                <button id="edit-student-btn" x-ref="editStudentBtn" hx-get="{% url 'students:edit' student.id %}" hx-target="body" hx-swap="beforeend"
                         class="w-full sm:w-auto bg-gray-900 hover:bg-black text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 transition" title="Ctrl + M">
                     ✏️ Modifier
                 </button>
-                <button id="new-enrollment-detail-btn" hx-get="{% url 'students:enrollment_form' %}?student_id={{ student.id }}" hx-target="body" hx-swap="beforeend"
+                <button id="new-enrollment-detail-btn" x-ref="newEnrollmentDetailBtn" hx-get="{% url 'students:enrollment_form' %}?student_id={{ student.id }}" hx-target="body" hx-swap="beforeend"
                         class="w-full sm:w-auto bg-gray-100 hover:bg-gray-200 text-gray-900 px-4 py-2 rounded-lg flex items-center justify-center gap-2 transition border border-gray-300" title="Alt + A">
                     <span>+</span> Nouvelle Inscription
                 </button>
@@ -183,13 +233,13 @@
                                         {% if enrollment.balance_due > 0 %}
                                         <a href="{% url 'finance:add_payment' enrollment.id %}" class="text-xs px-3 py-1 rounded bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 font-semibold">💰 Enregistrer paiement</a>
                                         {% endif %}
-                                        <form method="post" action="{% url 'students:unenroll' enrollment.id %}">
+                                        <form method="post" action="{% url 'students:unenroll' enrollment.id %}" data-confirm="Résilier cette inscription ?">
                                             {% csrf_token %}
-                                            <button type="submit" class="text-xs px-3 py-1 rounded bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100" onclick="return confirm('Résilier cette inscription ?');">Résilier</button>
+                                            <button type="submit" class="text-xs px-3 py-1 rounded bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100">Résilier</button>
                                         </form>
-                                        <form method="post" action="{% url 'students:delete_enrollment' enrollment.id %}">
+                                        <form method="post" action="{% url 'students:delete_enrollment' enrollment.id %}" data-confirm="Supprimer définitivement cette inscription et ses données (paiements, présences) ?">
                                             {% csrf_token %}
-                                            <button type="submit" class="text-xs px-3 py-1 rounded bg-red-50 text-red-700 border border-red-200 hover:bg-red-100" onclick="return confirm('Supprimer définitivement cette inscription et ses données (paiements, présences) ?');">Supprimer</button>
+                                            <button type="submit" class="text-xs px-3 py-1 rounded bg-red-50 text-red-700 border border-red-200 hover:bg-red-100">Supprimer</button>
                                         </form>
                                     </div>
                                 </div>
@@ -235,10 +285,9 @@
                                             <span class="text-xs text-gray-400 italic">Pas de reçu</span>
                                             {% endif %}
                                             
-                                            <form method="post" action="{% url 'finance:delete_payment' payment.id %}" class="inline">
+                                            <form method="post" action="{% url 'finance:delete_payment' payment.id %}" class="inline" data-confirm="Supprimer ce paiement de {{ payment.amount }} DA ?">
                                                 {% csrf_token %}
-                                                <button type="submit" 
-                                                        onclick="return confirm('Supprimer ce paiement de {{ payment.amount }} DA ?')"
+                                                <button type="submit"
                                                         class="flex items-center gap-1 text-xs px-2 py-1.5 bg-red-50 text-red-700 border border-red-200 rounded-lg hover:bg-red-100 font-medium transition">
                                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
@@ -298,7 +347,7 @@
         </div>
     </div>
     <!-- Modal pour les frais d'inscription -->
-    <div id="annual-fee-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 z-50 flex items-center justify-center">
+    <div id="annual-fee-modal" x-show="annualFeeModalOpen" x-cloak @click.self="closeAnnualFeeModal()" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-50 flex items-center justify-center">
         <div class="bg-white rounded-xl shadow-lg max-w-md w-full mx-4">
             <div class="p-6 border-b border-gray-100 bg-gradient-to-r from-emerald-50 to-teal-50">
                 <h3 class="text-lg font-bold text-gray-900">Frais d'Inscription</h3>
@@ -311,149 +360,29 @@
             <div class="p-6">
                 <div class="space-y-4">
                     <div id="action-selector" class="flex gap-2 mb-4">
-                        <button onclick="setModalAction('mark_paid')" class="flex-1 px-3 py-2 rounded-lg border-2 border-emerald-300 bg-emerald-50 text-emerald-700 font-semibold transition" id="btn-mark-paid">
+                        <button type="button" @click="annualFeeAction = 'mark_paid'" :class="annualFeeAction === 'mark_paid' ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-gray-200 bg-white text-gray-600'" class="flex-1 px-3 py-2 rounded-lg border-2 font-semibold transition" id="btn-mark-paid">
                             ✅ Marquer Payé
                         </button>
-                        <button onclick="setModalAction('mark_unpaid')" class="flex-1 px-3 py-2 rounded-lg border-2 border-gray-200 bg-white text-gray-600 font-semibold hover:border-red-300 transition" id="btn-mark-unpaid">
+                        <button type="button" @click="annualFeeAction = 'mark_unpaid'" :class="annualFeeAction === 'mark_unpaid' ? 'border-red-300 bg-red-50 text-red-700' : 'border-gray-200 bg-white text-gray-600'" class="flex-1 px-3 py-2 rounded-lg border-2 font-semibold hover:border-red-300 transition" id="btn-mark-unpaid">
                             ✗ Marquer Impayé
                         </button>
                     </div>
-                    <div id="date-input-container">
+                    <div id="date-input-container" x-show="annualFeeAction === 'mark_paid'">
                         <label class="block text-sm font-semibold text-gray-700 mb-2">Date du paiement</label>
-                        <input type="date" id="payment-date-input" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none" />
+                        <input type="date" id="payment-date-input" x-model="paymentDate" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none" />
                         <p class="text-xs text-gray-500 mt-1">Laissez vide pour utiliser aujourd'hui</p>
                     </div>
                 </div>
             </div>
             <div class="p-6 border-t border-gray-100 bg-gray-50 flex justify-end gap-2">
-                <button onclick="closeAnnualFeeModal()" class="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 font-medium transition">
+                <button type="button" @click="closeAnnualFeeModal()" class="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 font-medium transition">
                     Annuler
                 </button>
-                <button onclick="submitAnnualFee()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium transition">
+                <button type="button" @click="submitAnnualFee()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium transition">
                     Confirmer
                 </button>
             </div>
         </div>
     </div>
 </div>
-
-<script>
-function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
-            }
-        }
-    }
-    return cookieValue;
-}
-
-let currentModalAction = 'mark_paid';
-
-function setModalAction(action) {
-    currentModalAction = action;
-    
-    // Mettre à jour les boutons
-    const btnPaid = document.getElementById('btn-mark-paid');
-    const btnUnpaid = document.getElementById('btn-mark-unpaid');
-    const dateContainer = document.getElementById('date-input-container');
-    
-    if (action === 'mark_paid') {
-        btnPaid.classList.add('border-emerald-300', 'bg-emerald-50', 'text-emerald-700');
-        btnPaid.classList.remove('border-gray-200', 'bg-white', 'text-gray-600');
-        btnUnpaid.classList.remove('border-red-300', 'bg-red-50', 'text-red-700');
-        btnUnpaid.classList.add('border-gray-200', 'bg-white', 'text-gray-600');
-        dateContainer.classList.remove('hidden');
-    } else {
-        btnUnpaid.classList.add('border-red-300', 'bg-red-50', 'text-red-700');
-        btnUnpaid.classList.remove('border-gray-200', 'bg-white', 'text-gray-600');
-        btnPaid.classList.remove('border-emerald-300', 'bg-emerald-50', 'text-emerald-700');
-        btnPaid.classList.add('border-gray-200', 'bg-white', 'text-gray-600');
-        dateContainer.classList.add('hidden');
-    }
-}
-
-function openAnnualFeeModal(studentId) {
-    // Déterminer le statut actuel depuis le badge
-    const badge = document.getElementById('annual-fee-badge');
-    const isPaid = badge.querySelector('.bg-emerald-100') !== null;
-    
-    // Définir l'action par défaut selon le statut actuel
-    const defaultAction = isPaid ? 'mark_unpaid' : 'mark_paid';
-    setModalAction(defaultAction);
-    
-    // Mettre la date de paiement à aujourd'hui par défaut
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('payment-date-input').value = today;
-    
-    // Stocker l'ID de l'étudiant
-    document.getElementById('annual-fee-modal').dataset.studentId = studentId;
-    
-    // Afficher la modal
-    document.getElementById('annual-fee-modal').classList.remove('hidden');
-}
-
-function closeAnnualFeeModal() {
-    document.getElementById('annual-fee-modal').classList.add('hidden');
-}
-
-function submitAnnualFee() {
-    const studentId = document.getElementById('annual-fee-modal').dataset.studentId;
-    const paymentDate = document.getElementById('payment-date-input').value;
-    
-    const payload = {
-        action: currentModalAction,
-        payment_date: (currentModalAction === 'mark_paid') ? (paymentDate || null) : null
-    };
-    
-    fetch(`/students/${studentId}/toggle-annual-fee/`, {
-        method: 'POST',
-        headers: {
-            'X-CSRFToken': getCookie('csrftoken'),
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            closeAnnualFeeModal();
-            // Recharger la page pour afficher le nouveau statut
-            window.location.reload();
-        } else {
-            alert('Erreur: ' + (data.error || 'Impossible de modifier le statut'));
-        }
-    })
-    .catch(error => {
-        console.error('Erreur:', error);
-        alert('Erreur lors de la modification du statut');
-    });
-}
-
-// Fermer la modal au clic en dehors
-document.addEventListener('click', function(e) {
-    const modal = document.getElementById('annual-fee-modal');
-    if (e.target === modal) {
-        closeAnnualFeeModal();
-    }
-});
-
-// Raccourci Alt+A pour Nouvelle Inscription
-document.addEventListener('keydown', function(e) {
-    if (e.altKey && e.key === 'a') {
-        e.preventDefault();
-        document.getElementById('new-enrollment-detail-btn').click();
-    }
-    // Raccourci Ctrl+M pour Modifier
-    if (e.ctrlKey && e.key === 'm') {
-        e.preventDefault();
-        document.getElementById('edit-student-btn').click();
-    }
-});
-</script>
 {% endblock %}

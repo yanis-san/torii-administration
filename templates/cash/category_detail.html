@@ -16,8 +16,8 @@
             <p class="text-gray-600 mt-1">{{ category.description }}</p>
             {% endif %}
         </div>
-        <form method="post" action="{% url 'cash:delete_category' category.id %}" 
-              onsubmit="return confirm('ATTENTION : Supprimer cette catégorie et TOUTES ses transactions ?')">
+          <form method="post" action="{% url 'cash:delete_category' category.id %}" 
+              data-confirm="ATTENTION : Supprimer cette catégorie et TOUTES ses transactions ?">
             {% csrf_token %}
             <button type="submit" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
                 Supprimer la catégorie
@@ -41,13 +41,13 @@
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <h3 class="text-sm font-medium text-gray-500 mb-4">Actions Rapides</h3>
             <form method="post" action="{% url 'cash:reset_category' category.id %}" 
-                  onsubmit="return confirm('Remettre à 0 DA ?')">
+                data-confirm="Remettre à 0 DA ?">
                 {% csrf_token %}
                 <button type="submit" class="w-full bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg font-medium transition mb-2">
                     Reset à 0
                 </button>
             </form>
-            <button onclick="document.getElementById('customResetModal').classList.remove('hidden')" 
+            <button data-toggle-class-target="#customResetModal" data-toggle-class-name="hidden" data-toggle-class-mode="remove"
                     class="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition">
                 Reset Personnalisé
             </button>
@@ -163,7 +163,7 @@
                     <td class="px-6 py-4 text-center">
                         {% if not category.is_total and not transaction.category.is_total %}
                         <form method="post" action="{% url 'cash:cancel_transaction' transaction.id %}" 
-                              onsubmit="return confirm('Annuler cette transaction ? Le montant sera inversé.');" class="inline">
+                            data-confirm="Annuler cette transaction ? Le montant sera inversé." class="inline">
                             {% csrf_token %}
                             <button type="submit" class="text-red-600 hover:text-red-800 font-medium text-xs px-2 py-1 border border-red-200 hover:border-red-600 rounded transition">
                                 Annuler
@@ -190,7 +190,7 @@
     <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
         <div class="flex justify-between items-center mb-4">
             <h3 class="text-lg font-bold text-gray-900">Reset Personnalisé</h3>
-            <button onclick="document.getElementById('customResetModal').classList.add('hidden')" class="text-gray-500 hover:text-red-500 text-2xl">&times;</button>
+            <button data-toggle-class-target="#customResetModal" data-toggle-class-name="hidden" data-toggle-class-mode="add" class="text-gray-500 hover:text-red-500 text-2xl">&times;</button>
         </div>
         
         <form method="post" action="{% url 'cash:custom_reset' category.id %}">
@@ -213,7 +213,7 @@
                 <button type="submit" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition">
                     Appliquer
                 </button>
-                <button type="button" onclick="document.getElementById('customResetModal').classList.add('hidden')" 
+                <button type="button" data-toggle-class-target="#customResetModal" data-toggle-class-name="hidden" data-toggle-class-mode="add"
                         class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg font-medium transition">
                     Annuler
                 </button>

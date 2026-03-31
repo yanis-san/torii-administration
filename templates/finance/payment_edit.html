@@ -3,7 +3,53 @@
 {% block title %}Modifier Paiement{% endblock %}
 
 {% block content %}
-<div class="max-w-lg mx-auto mt-10">
+<div class="max-w-lg mx-auto mt-10" x-data="{
+    isDragging: false,
+    selectedFileName: '',
+    hasSelectedFile: false,
+    validTypes: ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'image/webp'],
+    maxSizeBytes: 10 * 1024 * 1024,
+    openFilePicker() {
+        this.$refs.receiptInput.click();
+    },
+    showFile(file) {
+        this.selectedFileName = file.name;
+        this.hasSelectedFile = true;
+    },
+    resetFile() {
+        this.$refs.receiptInput.value = '';
+        this.selectedFileName = '';
+        this.hasSelectedFile = false;
+    },
+    handleFile(file) {
+        if (!file) {
+            this.resetFile();
+            return;
+        }
+        if (!this.validTypes.includes(file.type)) {
+            window.alert('Type de fichier non supporte. Utilisez PDF, JPEG, PNG ou WEBP.');
+            this.resetFile();
+            return;
+        }
+        if (file.size > this.maxSizeBytes) {
+            window.alert('Fichier trop volumineux (max 10 MB)');
+            this.resetFile();
+            return;
+        }
+        this.showFile(file);
+    },
+    handleDrop(event) {
+        this.isDragging = false;
+        const files = event.dataTransfer && event.dataTransfer.files ? event.dataTransfer.files : null;
+        if (!files || files.length === 0) {
+            return;
+        }
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(files[0]);
+        this.$refs.receiptInput.files = dataTransfer.files;
+        this.handleFile(files[0]);
+    }
+}">
     <div class="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
         <div class="bg-indigo-600 p-6 text-white">
             <h2 class="text-xl font-bold">Modifier un Paiement</h2>
@@ -73,21 +119,30 @@
                         <a href="{{ payment.receipt.url }}" target="_blank" class="text-indigo-600 text-sm hover:underline">Voir le reçu actuel</a>
                         {% endif %}
                     </div>
-                    <div id="dropZone" 
+                    <div id="dropZone"
+                        data-receipt-dropzone="true"
+                        @click="openFilePicker()"
+                        @keydown.enter.prevent="openFilePicker()"
+                        @keydown.space.prevent="openFilePicker()"
+                        @dragover.prevent="isDragging = true"
+                        @dragleave.prevent="isDragging = false"
+                        @drop.prevent="handleDrop($event)"
+                        :class="isDragging ? 'border-indigo-500 bg-indigo-100' : ''"
                          class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition"
-                         onclick="document.getElementById('id_receipt').click()">
-                        <svg id="uploadIcon" class="w-12 h-12 mx-auto mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        role="button"
+                        tabindex="0">
+                        <svg id="uploadIcon" x-show="!hasSelectedFile" class="w-12 h-12 mx-auto mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
                         </svg>
-                        <p id="dropText" class="text-gray-600 mb-1">Glissez un fichier ici ou cliquez pour parcourir</p>
+                        <p id="dropText" x-show="!hasSelectedFile" class="text-gray-600 mb-1">Glissez un fichier ici ou cliquez pour parcourir</p>
                         <p class="text-xs text-gray-500">PDF, JPEG, PNG, WEBP (Max 10 MB)</p>
-                        <div id="filePreview" class="hidden mt-4">
+                        <div id="filePreview" x-show="hasSelectedFile" class="mt-4">
                             <div class="inline-flex items-center bg-indigo-100 text-indigo-800 px-4 py-2 rounded-lg">
                                 <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
                                     <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"/>
                                 </svg>
-                                <span id="fileName" class="font-medium"></span>
-                                <button type="button" onclick="clearFile(event)" class="ml-3 text-indigo-600 hover:text-indigo-800">
+                                <span id="fileName" x-text="selectedFileName" class="font-medium"></span>
+                                <button type="button" data-clear-receipt="true" @click.stop="resetFile()" class="ml-3 text-indigo-600 hover:text-indigo-800">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                                     </svg>
@@ -95,7 +150,7 @@
                             </div>
                         </div>
                     </div>
-                    {{ form.receipt }}
+                    {{ form.receipt.as_widget(attrs={'x-ref': 'receiptInput', '@change': 'handleFile($event.target.files[0])'}) }}
                 </div>
 
                 <div class="pt-4 flex gap-3">
@@ -110,67 +165,4 @@
         </div>
     </div>
 </div>
-
-<script>
-    const dropZone = document.getElementById('dropZone');
-    const fileInput = document.getElementById('id_receipt');
-    const filePreview = document.getElementById('filePreview');
-    const fileName = document.getElementById('fileName');
-    const uploadIcon = document.getElementById('uploadIcon');
-    const dropText = document.getElementById('dropText');
-
-    dropZone.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        dropZone.classList.add('border-indigo-500', 'bg-indigo-100');
-    });
-
-    dropZone.addEventListener('dragleave', (e) => {
-        e.preventDefault();
-        dropZone.classList.remove('border-indigo-500', 'bg-indigo-100');
-    });
-
-    dropZone.addEventListener('drop', (e) => {
-        e.preventDefault();
-        dropZone.classList.remove('border-indigo-500', 'bg-indigo-100');
-        const files = e.dataTransfer.files;
-        if (files.length > 0) {
-            const dataTransfer = new DataTransfer();
-            dataTransfer.items.add(files[0]);
-            fileInput.files = dataTransfer.files;
-            handleFile(files[0]);
-        }
-    });
-
-    fileInput.addEventListener('change', (e) => {
-        if (e.target.files.length > 0) {
-            handleFile(e.target.files[0]);
-        }
-    });
-
-    function handleFile(file) {
-        const validTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-        if (!validTypes.includes(file.type)) {
-            alert('❌ Type de fichier non supporté. Utilisez PDF, JPEG, PNG ou WEBP.');
-            fileInput.value = '';
-            return;
-        }
-        if (file.size > 10 * 1024 * 1024) {
-            alert('❌ Fichier trop volumineux (max 10 MB)');
-            fileInput.value = '';
-            return;
-        }
-        fileName.textContent = file.name;
-        filePreview.classList.remove('hidden');
-        uploadIcon.classList.add('hidden');
-        dropText.classList.add('hidden');
-    }
-
-    function clearFile(e) {
-        e.stopPropagation();
-        fileInput.value = '';
-        filePreview.classList.add('hidden');
-        uploadIcon.classList.remove('hidden');
-        dropText.classList.remove('hidden');
-    }
-</script>
 {% endblock %}
