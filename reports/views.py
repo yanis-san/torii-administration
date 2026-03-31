@@ -967,7 +967,7 @@ def report_enrollments_by_academic_year_zip(request):
     buffer.seek(0)
     response = HttpResponse(buffer.getvalue(), content_type='application/zip')
     zname = f"inscriptions_{(year_obj.label if year_obj else 'Toutes_annees')}_{datetime.now().strftime('%Y%m%d')}.zip"
-    response['Content-Disposition'] = f'attachment; filename="{zname.replace(' ', '_')}"'
+    response['Content-Disposition'] = f'attachment; filename="{zname.replace(" ", "_")}"'
     return response
 
 
