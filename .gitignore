@@ -65,6 +65,4 @@ Thumbs.db
 db_postgres_*.sql
 
 # Local deployment notes and sensitive exports
-tuto_cpanel.md
-students.json
-db_backup_*.json
+
