@@ -1,0 +1,18 @@
+.enrollment-edit-tariff-modal {
+  animation: enrollment-fade-in 0.3s ease-in;
+}
+
+.enrollment-edit-tariff-modal.is-closing {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+@keyframes enrollment-fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}

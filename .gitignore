@@ -50,7 +50,7 @@ local_settings.py
 
 # Static files
 staticfiles/
-/static/
+# Keep source static assets versioned (css/js/images)
 
 # Media
 media/
