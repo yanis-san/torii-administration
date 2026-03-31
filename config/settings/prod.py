@@ -14,6 +14,8 @@ DATABASES = {
         'HOST': os.getenv('DB_HOST', 'localhost'),
         'PORT': os.getenv('DB_PORT', '3306'),
         'OPTIONS': {
+            'charset': 'utf8mb4',
+            'use_unicode': True,
             'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
         }
     }
