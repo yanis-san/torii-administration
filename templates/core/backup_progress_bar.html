@@ -1,0 +1,23 @@
+<!-- Template de la barre de progression qui se met à jour -->
+<h3 role="status" id="pblabel" tabindex="-1" autofocus class="text-sm font-medium mb-3 {% if backup_state.status == 'completed' %}text-green-600{% elif backup_state.status == 'failed' %}text-red-600{% else %}text-blue-600{% endif %}">
+    {% if backup_state.status == 'running' %}
+        ⏳ {{ backup_state.message }}
+    {% elif backup_state.status == 'completed' %}
+        ✅ Sauvegarde réussie!
+    {% elif backup_state.status == 'failed' %}
+        ❌ {{ backup_state.message }}
+    {% endif %}
+</h3>
+
+<div class="backup-progress-track bg-gray-200 rounded-full h-2 overflow-hidden mb-3"
+     role="progressbar" 
+     aria-valuemin="0" 
+     aria-valuemax="100" 
+     aria-valuenow="{{ backup_state.progress }}" 
+     aria-labelledby="pblabel">
+    <div id="pb" class="backup-progress-bar {% if backup_state.status == 'failed' %}bg-red-600{% elif backup_state.status == 'completed' %}bg-green-600{% else %}bg-blue-600{% endif %} h-full" data-progress-width="{{ backup_state.progress }}">
+    </div>
+</div>
+
+<p class="text-xs text-gray-600">{{ backup_state.progress }}%</p>
+

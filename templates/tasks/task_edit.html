@@ -1,0 +1,171 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Modifier la Tâche{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    
+    <!-- En-tête -->
+    <div class="mb-8">
+        <a href="{% url 'tasks:list' %}" class="text-indigo-600 hover:text-indigo-700 font-medium mb-4 inline-flex items-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+            </svg>
+            Retour aux tâches
+        </a>
+        <h1 class="text-3xl font-bold text-gray-900 mt-4">✏️ Modifier la Tâche</h1>
+        <p class="text-gray-600 mt-1">{{ task.title }}</p>
+    </div>
+
+    <!-- Formulaire -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        
+        <form method="post" action="{% url 'tasks:edit' task.id %}" class="space-y-6">
+            {% csrf_token %}
+
+            <!-- Titre -->
+            <div>
+                <label for="title" class="block text-sm font-semibold text-gray-700 mb-2">
+                    📌 Titre de la tâche *
+                </label>
+                <input type="text" 
+                       id="title" 
+                       name="title" 
+                       required
+                       value="{{ task.title }}"
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
+            </div>
+
+            <!-- Description -->
+            <div>
+                <label for="description" class="block text-sm font-semibold text-gray-700 mb-2">
+                    📝 Description
+                </label>
+                <textarea id="description" 
+                          name="description" 
+                          rows="3"
+                          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">{{ task.description }}</textarea>
+            </div>
+
+            <!-- Priorité, Date planifiée et Deadline -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                
+                <!-- Priorité -->
+                <div>
+                    <label for="priority" class="block text-sm font-semibold text-gray-700 mb-2">
+                        ⚡ Priorité
+                    </label>
+                    <select id="priority" 
+                            name="priority"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
+                        <option value="LOW" {% if task.priority == 'LOW' %}selected{% endif %}>📎 Basse</option>
+                        <option value="MEDIUM" {% if task.priority == 'MEDIUM' %}selected{% endif %}>📌 Moyenne</option>
+                        <option value="HIGH" {% if task.priority == 'HIGH' %}selected{% endif %}>⚠️ Haute</option>
+                        <option value="URGENT" {% if task.priority == 'URGENT' %}selected{% endif %}>🔥 Urgente</option>
+                    </select>
+                </div>
+
+                <!-- Date planifiée -->
+                <div>
+                    <label for="scheduled_date" class="block text-sm font-semibold text-gray-700 mb-2">
+                        📆 Date planifiée
+                    </label>
+                    <input type="date" 
+                           id="scheduled_date" 
+                           name="scheduled_date"
+                           value="{{ task.scheduled_date|date:'Y-m-d' }}"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
+                    <p class="text-xs text-gray-500 mt-1">À faire ce jour</p>
+                </div>
+
+                <!-- Deadline -->
+                <div>
+                    <label for="deadline" class="block text-sm font-semibold text-gray-700 mb-2">
+                        ⏰ Date limite
+                    </label>
+                    <input type="date" 
+                           id="deadline" 
+                           name="deadline"
+                           value="{{ task.deadline|date:'Y-m-d' }}"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
+                    <p class="text-xs text-gray-500 mt-1">Deadline absolue</p>
+                </div>
+            </div>
+
+            <!-- Catégorie -->
+            <div>
+                <label for="category" class="block text-sm font-semibold text-gray-700 mb-2">
+                    📁 Catégorie
+                </label>
+                <select id="category" 
+                        name="category"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
+                    <option value="">-- Aucune catégorie --</option>
+                    {% for category in categories %}
+                        <option value="{{ category.id }}" {% if task.category.id == category.id %}selected{% endif %}>
+                            {{ category.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Utilisateur assigné -->
+            <div>
+                <label for="assigned_to" class="block text-sm font-semibold text-gray-700 mb-2">
+                    👤 Assigné à
+                </label>
+                <select id="assigned_to" 
+                        name="assigned_to"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
+                    {% for user in users %}
+                        <option value="{{ user.id }}" {% if task.assigned_to.id == user.id %}selected{% endif %}>
+                            {{ user.username }}{% if user.first_name %} ({{ user.first_name }} {{ user.last_name }}){% endif %}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Personne associée (lecture seule) -->
+            {% if task.get_related_person_display %}
+            <div class="border-t border-gray-200 pt-6">
+                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                    👤 Personne associée
+                </label>
+                <div class="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                    <p class="font-medium text-gray-900">{{ task.get_related_person_display }}</p>
+                    {% if task.get_related_person_phone %}
+                        <p class="text-sm text-gray-600">📱 {{ task.get_related_person_phone }}</p>
+                    {% endif %}
+                    <p class="text-xs text-gray-500 mt-2">💡 Pour changer la personne, créez une nouvelle tâche</p>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Notes additionnelles -->
+            <div>
+                <label for="notes" class="block text-sm font-semibold text-gray-700 mb-2">
+                    💬 Notes additionnelles
+                </label>
+                <textarea id="notes" 
+                          name="notes" 
+                          rows="4"
+                          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">{{ task.notes }}</textarea>
+            </div>
+
+            <!-- Boutons -->
+            <div class="flex items-center gap-3 pt-4 border-t border-gray-200">
+                <button type="submit"
+                        class="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-lg font-semibold shadow-sm transition">
+                    💾 Enregistrer
+                </button>
+                <a href="{% url 'tasks:list' %}"
+                   class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-8 py-3 rounded-lg font-semibold transition">
+                    Annuler
+                </a>
+            </div>
+        </form>
+
+    </div>
+</div>
+{% endblock %}

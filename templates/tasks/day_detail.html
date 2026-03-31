@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Tâches du {{ date|date:"d/m/Y" }} - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <!-- En-tête avec navigation -->
+    <div class="mb-6 flex items-center justify-between">
+        <div class="flex items-center gap-4">
+            <a href="{% url 'tasks:calendar' %}?year={{ year }}&month={{ month }}" 
+               class="text-blue-600 hover:text-blue-800">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+            </a>
+            <h1 class="text-3xl font-bold text-gray-900">
+                📅 Tâches du {{ date|date:"l d F Y" }}
+            </h1>
+        </div>
+        <div class="flex items-center gap-2">
+            <a href="{% url 'tasks:day_detail' prev_date.year prev_date.month prev_date.day %}"
+               class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition">
+                ← Jour précédent
+            </a>
+            <a href="{% url 'tasks:day_detail' next_date.year next_date.month next_date.day %}"
+               class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition">
+                Jour suivant →
+            </a>
+            <a href="{% url 'tasks:calendar' %}?year={{ year }}&month={{ month }}"
+               class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition">
+                Retour au calendrier
+            </a>
+        </div>
+    </div>
+
+    <!-- Statistiques -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="text-sm font-medium text-gray-600">Total</div>
+            <div class="text-3xl font-bold text-gray-900 mt-2">{{ total_tasks }}</div>
+        </div>
+        <div class="bg-green-50 rounded-lg shadow p-6">
+            <div class="text-sm font-medium text-green-600">Planifiées</div>
+            <div class="text-3xl font-bold text-green-700 mt-2">{{ scheduled_count }}</div>
+        </div>
+        <div class="bg-orange-50 rounded-lg shadow p-6">
+            <div class="text-sm font-medium text-orange-600">Deadline</div>
+            <div class="text-3xl font-bold text-orange-700 mt-2">{{ deadline_count }}</div>
+        </div>
+    </div>
+
+    <!-- Tâches planifiées -->
+    {% if tasks_scheduled %}
+    <div class="mb-6">
+        <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+            📅 Tâches planifiées ce jour ({{ scheduled_count }})
+        </h2>
+        <div class="space-y-3">
+            {% for task in tasks_scheduled %}
+                {% include 'tasks/_task_card.html' with task=task show_scheduled=True %}
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Tâches avec deadline -->
+    {% if tasks_deadline %}
+    <div class="mb-6">
+        <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+            ⏰ Deadline ce jour ({{ deadline_count }})
+        </h2>
+        <div class="space-y-3">
+            {% for task in tasks_deadline %}
+                {% include 'tasks/_task_card.html' with task=task show_deadline=True %}
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Message si aucune tâche -->
+    {% if not tasks_scheduled and not tasks_deadline %}
+    <div class="bg-gray-50 rounded-lg p-12 text-center">
+        <svg class="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+        </svg>
+        <p class="text-gray-600 text-lg font-medium">Aucune tâche pour ce jour</p>
+        <p class="text-gray-500 mt-2">Créez une nouvelle tâche pour cette date</p>
+        <a href="{% url 'tasks:create' %}?scheduled_date={{ date|date:'Y-m-d' }}"
+           class="inline-flex items-center gap-2 mt-4 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg transition">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+            </svg>
+            Créer une tâche
+        </a>
+    </div>
+    {% else %}
+    <!-- Bouton pour créer une tâche -->
+    <div class="text-center mt-8">
+        <a href="{% url 'tasks:create' %}?scheduled_date={{ date|date:'Y-m-d' }}"
+           class="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-8 py-4 rounded-lg font-bold shadow-lg transition">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+            </svg>
+            Créer une tâche pour ce jour
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

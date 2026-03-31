@@ -1,0 +1,173 @@
+{% extends 'base.html' %}
+
+{% block title %}Nouveau Paiement{% endblock %}
+
+{% block content %}
+<div class="max-w-lg mx-auto mt-10" x-data="{
+    isDragging: false,
+    selectedFileName: '',
+    hasSelectedFile: false,
+    validTypes: ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'image/webp'],
+    maxSizeBytes: 10 * 1024 * 1024,
+    openFilePicker() {
+        this.$refs.receiptInput.click();
+    },
+    showFile(file) {
+        this.selectedFileName = file.name;
+        this.hasSelectedFile = true;
+    },
+    resetFile() {
+        this.$refs.receiptInput.value = '';
+        this.selectedFileName = '';
+        this.hasSelectedFile = false;
+    },
+    handleFile(file) {
+        if (!file) {
+            this.resetFile();
+            return;
+        }
+        if (!this.validTypes.includes(file.type)) {
+            window.alert('Type de fichier non supporte. Utilisez PDF, JPEG, PNG ou WEBP.');
+            this.resetFile();
+            return;
+        }
+        if (file.size > this.maxSizeBytes) {
+            window.alert('Fichier trop volumineux (max 10 MB)');
+            this.resetFile();
+            return;
+        }
+        this.showFile(file);
+    },
+    handleDrop(event) {
+        this.isDragging = false;
+        const files = event.dataTransfer && event.dataTransfer.files ? event.dataTransfer.files : null;
+        if (!files || files.length === 0) {
+            return;
+        }
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(files[0]);
+        this.$refs.receiptInput.files = dataTransfer.files;
+        this.handleFile(files[0]);
+    }
+}">
+    
+    <div class="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
+        
+        <div class="bg-indigo-600 p-6 text-white">
+            <h2 class="text-xl font-bold">Encaisser un Paiement</h2>
+            <p class="opacity-90 text-sm mt-1">
+                Pour : {{ student.first_name }} {{ student.last_name }}
+            </p>
+            <p class="text-xs bg-indigo-500 inline-block px-2 py-1 rounded mt-2">
+                Cours : {{ enrollment.cohort.name }}
+            </p>
+        </div>
+
+        <div class="p-6">
+            <!-- Messages d'erreur -->
+            {% if messages %}
+                {% for message in messages %}
+                <div class="mb-4 p-4 rounded-lg {% if message.tags == 'error' %}bg-red-50 border border-red-200 text-red-800{% else %}bg-green-50 border border-green-200 text-green-800{% endif %}">
+                    {{ message }}
+                </div>
+                {% endfor %}
+            {% endif %}
+            
+            <div class="mb-6 p-4 bg-yellow-50 text-yellow-800 rounded-lg text-sm border border-yellow-100 flex justify-between items-center">
+                <span>Reste à payer sur ce contrat :</span>
+                <span class="font-bold text-lg">{{ enrollment.balance_due }} DA</span>
+            </div>
+
+            <form method="post" enctype="multipart/form-data" class="space-y-4">
+                {% csrf_token %}
+                
+                <!-- Affichage des erreurs globales -->
+                {% if form.non_field_errors %}
+                <div class="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg">
+                    {{ form.non_field_errors }}
+                </div>
+                {% endif %}
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.amount.label }}</label>
+                    {{ form.amount }}
+                    {% if form.amount.errors %}
+                    <p class="text-red-600 text-sm mt-1">{{ form.amount.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.method.label }}</label>
+                    {{ form.method }}
+                    {% if form.method.errors %}
+                    <p class="text-red-600 text-sm mt-1">{{ form.method.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.date.label }}</label>
+                    {{ form.date }}
+                    <p class="text-xs text-gray-500 mt-1">Laissez vide pour utiliser aujourd'hui</p>
+                    {% if form.date.errors %}
+                    <p class="text-red-600 text-sm mt-1">{{ form.date.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.transaction_id.label }}</label>
+                    {{ form.transaction_id }}
+                    {% if form.transaction_id.errors %}
+                    <p class="text-red-600 text-sm mt-1">{{ form.transaction_id.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- Zone Drag & Drop pour le reçu -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">{{ form.receipt.label }} (optionnel)</label>
+                    <div id="dropZone"
+                        data-receipt-dropzone="true"
+                        @click="openFilePicker()"
+                        @keydown.enter.prevent="openFilePicker()"
+                        @keydown.space.prevent="openFilePicker()"
+                        @dragover.prevent="isDragging = true"
+                        @dragleave.prevent="isDragging = false"
+                        @drop.prevent="handleDrop($event)"
+                        :class="isDragging ? 'border-indigo-500 bg-indigo-100' : ''"
+                         class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition"
+                        role="button"
+                        tabindex="0">
+                        <svg id="uploadIcon" x-show="!hasSelectedFile" class="w-12 h-12 mx-auto mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                        </svg>
+                        <p id="dropText" x-show="!hasSelectedFile" class="text-gray-600 mb-1">Glissez un fichier ici ou cliquez pour parcourir</p>
+                        <p class="text-xs text-gray-500">PDF, JPEG, PNG, WEBP (Max 10 MB)</p>
+                        <div id="filePreview" x-show="hasSelectedFile" class="mt-4">
+                            <div class="inline-flex items-center bg-indigo-100 text-indigo-800 px-4 py-2 rounded-lg">
+                                <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"/>
+                                </svg>
+                                <span id="fileName" x-text="selectedFileName" class="font-medium"></span>
+                                <button type="button" data-clear-receipt="true" @click.stop="resetFile()" class="ml-3 text-indigo-600 hover:text-indigo-800">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <input type="file" name="{{ form.receipt.name }}" id="{{ form.receipt.id_for_label }}" class="hidden" x-ref="receiptInput" @change="handleFile($event.target.files[0])" accept="application/pdf,image/jpeg,image/png,image/webp">
+                </div>
+
+                <div class="pt-4 flex gap-3">
+                    <button type="submit" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg font-medium transition shadow-sm">
+                        Valider le Paiement
+                    </button>
+                    <a href="{% url 'students:detail' student.id %}" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition">
+                        Annuler
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

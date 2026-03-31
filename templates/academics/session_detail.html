@@ -1,0 +1,350 @@
+{% extends 'base.html' %}
+{% load academics_extras %}
+{% block title %}Appel - {{ session.date }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-4 sm:space-y-6 px-4 sm:px-6">
+
+    <div class="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-100">
+        <div class="flex flex-col sm:flex-row justify-between items-start gap-4">
+            <div class="w-full sm:w-auto">
+                <div class="text-sm text-gray-500 uppercase tracking-wide">Fiche de Séance</div>
+                <h1 class="text-xl sm:text-2xl font-bold text-gray-800">{{ session.cohort.name }}</h1>
+                <p class="text-indigo-600 font-medium text-sm sm:text-base">
+                    {{ session.date|date:"l d F Y" }}<br class="sm:hidden"> <span class="hidden sm:inline">•</span> {{ session.display_start_time|time:"H:i" }} - {{ session.display_end_time|time:"H:i" }}
+                    {% if session.is_ramadan %}
+                    <span class="inline-flex items-center ml-2 px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-100 text-amber-800">Ramadan</span>
+                    {% endif %}
+                </p>
+            </div>
+
+            <div class="w-full sm:w-auto text-left sm:text-right bg-indigo-50 p-3 rounded-lg border border-indigo-100">
+                <div class="text-xs text-indigo-800 uppercase font-bold">Rémunération Prof</div>
+                <div class="text-2xl font-bold text-indigo-900">{{ teacher_pay }} DA</div>
+                <div class="text-xs text-indigo-600">
+                    {{ duration_hours }}h x {{ current_hourly_rate }} DA/h
+                </div>
+                <div class="text-xs text-gray-500 mt-1">Prof: {{ session.teacher.first_name }}</div>
+                {% if hourly_rate_override %}
+                    <div class="mt-2">
+                        <span class="inline-block text-[10px] font-bold bg-orange-100 text-orange-800 px-2 py-1 rounded">
+                            💰 SURCHARGE: {{ hourly_rate_override }} DA/h (standard: {{ standard_hourly_rate }} DA/h)
+                        </span>
+                    </div>
+                {% endif %}
+                {% if session.duration_override_minutes %}
+                    <div class="mt-2">
+                        <span class="inline-block text-[10px] font-bold bg-orange-100 text-orange-800 px-2 py-1 rounded">
+                            ⏱️ OVERRIDE: {{ session.duration_override_minutes }} min
+                        </span>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="mt-4 pt-4 border-t border-gray-200 flex flex-wrap gap-2">
+            <a href="{% url 'documents:download_session_attendance' session.id %}"
+               class="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition shadow-sm text-sm">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                Télécharger la Liste de Présence
+            </a>
+            
+            {% if not user.is_teacher %}
+            <a href="{% url 'academics:change_session_teacher' session.id %}"
+               class="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white font-medium rounded-lg hover:bg-purple-700 transition shadow-sm text-sm">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                </svg>
+                Changer le Professeur
+            </a>
+            {% endif %}
+
+            {% if session.status == 'SCHEDULED' %}
+            <form method="post" action="{% url 'academics:postpone_session' session.id %}" class="inline" data-confirm="Reporter cette séance ?\n\nUne séance de rattrapage sera automatiquement ajoutée à la fin du planning.">
+                {% csrf_token %}
+                <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 text-white font-medium rounded-lg hover:bg-amber-700 transition shadow-sm text-sm">
+                    Reporter la Séance
+                </button>
+            </form>
+            {% elif session.status == 'POSTPONED' %}
+            <form method="post" action="{% url 'academics:cancel_postpone' session.id %}" class="inline" data-confirm="Annuler le report ?\n\nLa séance sera remise en Prévu et le rattrapage supprimé.">
+                {% csrf_token %}
+                <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition shadow-sm text-sm">
+                    Annuler le Report
+                </button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+
+    <form method="post" class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        {% csrf_token %}
+        
+        <!-- Section: Sélection du Professeur -->
+        {% if available_teachers|length > 1 %}
+        <div class="p-4 sm:p-6 border-b border-gray-100 bg-blue-50">
+            <label class="block text-sm font-bold text-gray-800 mb-4">👨‍🏫 Professeur pour cette séance</label>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-{{ available_teachers|length }} gap-3">
+                {% for prof in available_teachers %}
+                <label class="flex items-center p-3 border-2 rounded-lg cursor-pointer transition {% if prof.id == session.teacher.id %}border-indigo-500 bg-indigo-50{% else %}border-gray-200 hover:border-indigo-300{% endif %}">
+                    <input type="radio" name="teacher_id" value="{{ prof.id }}" 
+                           class="w-4 h-4 text-indigo-600 focus:ring-indigo-500"
+                           {% if prof.id == session.teacher.id %}checked{% endif %}
+                           {% if session.status == 'COMPLETED' and not is_editing %}disabled{% endif %}>
+                    <span class="ml-2 text-sm font-medium text-gray-700">
+                        {{ prof.first_name }} {{ prof.last_name }}
+                        {% if prof.id == session.cohort.teacher.id %}
+                        <span class="inline-block ml-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-purple-100 text-purple-800">Titulaire</span>
+                        {% else %}
+                        <span class="inline-block ml-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-100 text-amber-800">Remplaçant</span>
+                        {% endif %}
+                    </span>
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        
+        <div class="p-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+            <h3 class="font-bold text-gray-700 text-sm sm:text-base">Liste des Étudiants</h3>
+            {% if session.status == 'COMPLETED' and not is_editing %}
+                <span class="text-xs text-green-700 bg-green-50 border border-green-200 px-2 py-1 rounded">Séance validée</span>
+            {% else %}
+                <span class="text-xs text-gray-500 hidden sm:inline">Cochez la présence</span>
+            {% endif %}
+        </div>
+
+        {% if not session.status == 'COMPLETED' or is_editing %}
+        <div class="px-4 py-3 border-b border-gray-100 bg-white flex flex-wrap gap-2">
+            <button type="button" id="mark-all-present" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-green-100 text-green-800 hover:bg-green-200 transition">
+                Tout le monde présent
+            </button>
+            <button type="button" id="mark-all-absent" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-red-100 text-red-800 hover:bg-red-200 transition">
+                Tout le monde absent
+            </button>
+        </div>
+        {% endif %}
+
+        <!-- Version Desktop: Tableau -->
+        <div class="hidden md:block">
+            <table class="w-full text-left border-collapse">
+                <thead class="bg-gray-50 text-xs text-gray-500 uppercase">
+                    <tr>
+                        <th class="p-4">Étudiant</th>
+                        <th class="p-4 text-center">Présent</th>
+                        <th class="p-4 text-center">Absent</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for enrollment in enrollments %}
+                    {% with current_status=attendance_dict|get_item:enrollment.student.id|default:"PRESENT" %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="p-4 font-medium text-gray-800">
+                            {{ enrollment.student.last_name }} {{ enrollment.student.first_name }}
+                        </td>
+
+                        {% if session.status == 'COMPLETED' and not is_editing %}
+                            <td class="p-4 text-center">
+                                {% if current_status == 'PRESENT' %}
+                                    <span class="text-green-600 font-semibold">✔</span>
+                                {% else %}
+                                    <span class="text-gray-300">—</span>
+                                {% endif %}
+                            </td>
+                            <td class="p-4 text-center">
+                                {% if current_status == 'ABSENT' %}
+                                    <span class="text-red-600 font-semibold">✖</span>
+                                {% else %}
+                                    <span class="text-gray-300">—</span>
+                                {% endif %}
+                            </td>
+                        {% else %}
+                            <td class="p-4 text-center">
+                                <input type="radio" name="status_{{ enrollment.student.id }}" value="PRESENT"
+                                       data-status="PRESENT"
+                                       class="w-4 h-4 text-green-600 focus:ring-green-500"
+                                       {% if current_status != 'ABSENT' %}checked{% endif %}>
+                            </td>
+                            <td class="p-4 text-center">
+                                <input type="radio" name="status_{{ enrollment.student.id }}" value="ABSENT"
+                                       data-status="ABSENT"
+                                       class="w-4 h-4 text-red-600 focus:ring-red-500"
+                                       {% if current_status == 'ABSENT' %}checked{% endif %}>
+                            </td>
+                        {% endif %}
+                    </tr>
+                    {% endwith %}
+                    {% empty %}
+                    <tr>
+                        <td colspan="3" class="p-6 text-center text-gray-500 italic">
+                            Aucun étudiant inscrit dans ce cours.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Version Mobile: Cartes -->
+        <div class="md:hidden divide-y divide-gray-100">
+            {% for enrollment in enrollments %}
+            {% with current_status=attendance_dict|get_item:enrollment.student.id|default:"PRESENT" %}
+            <div class="p-4 space-y-3">
+                <div class="font-semibold text-gray-800 text-base">
+                    {{ enrollment.student.last_name }} {{ enrollment.student.first_name }}
+                </div>
+
+                {% if session.status == 'COMPLETED' and not is_editing %}
+                    <div class="flex items-center gap-3">
+                        <span class="text-sm font-medium">Statut :</span>
+                        <span class="text-xs px-2 py-1 rounded-full {% if current_status == 'ABSENT' %}bg-red-100 text-red-800{% else %}bg-green-100 text-green-800{% endif %}">
+                            {% if current_status == 'ABSENT' %}Absent{% else %}Présent{% endif %}
+                        </span>
+                    </div>
+                {% else %}
+                    <div class="grid grid-cols-2 gap-2">
+                        <label class="flex items-center gap-2 p-3 border-2 rounded-lg cursor-pointer transition {% if current_status != 'ABSENT' %}border-green-500 bg-green-50{% else %}border-gray-200{% endif %}">
+                            <input type="radio" name="status_{{ enrollment.student.id }}" value="PRESENT"
+                                   data-status="PRESENT"
+                                   class="w-5 h-5 text-green-600 focus:ring-green-500"
+                                   {% if current_status != 'ABSENT' %}checked{% endif %}>
+                            <span class="text-sm font-medium">Présent</span>
+                        </label>
+
+                        <label class="flex items-center gap-2 p-3 border-2 rounded-lg cursor-pointer transition {% if current_status == 'ABSENT' %}border-red-500 bg-red-50{% else %}border-gray-200{% endif %}">
+                            <input type="radio" name="status_{{ enrollment.student.id }}" value="ABSENT"
+                                   data-status="ABSENT"
+                                   class="w-5 h-5 text-red-600 focus:ring-red-500"
+                                   {% if current_status == 'ABSENT' %}checked{% endif %}>
+                            <span class="text-sm font-medium">Absent</span>
+                        </label>
+                    </div>
+                {% endif %}
+            </div>
+            {% endwith %}
+            {% empty %}
+            <div class="p-6 text-center text-gray-500 italic">
+                Aucun étudiant inscrit dans ce cours.
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="p-6 border-t border-gray-100 bg-gray-50 space-y-4">
+            <!-- Section Taux Horaire -->
+            <div class="bg-white p-4 rounded-lg border border-gray-200">
+                <label class="block text-sm font-bold text-gray-800 mb-3">💰 Taux Horaire pour cette Séance</label>
+                <div class="space-y-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-xs text-gray-600 mb-1">Taux Standard du Groupe</p>
+                            <div class="text-lg font-bold text-gray-800">{{ standard_hourly_rate }} DA/h</div>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-600 mb-1">Taux Actuellement Utilisé</p>
+                            <div class="text-lg font-bold {% if hourly_rate_override %}text-orange-600{% else %}text-indigo-600{% endif %}">
+                                {{ current_hourly_rate }} DA/h
+                                {% if hourly_rate_override %}
+                                <span class="text-xs text-orange-600 font-normal"> (surcharge)</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="pt-3 border-t border-gray-200">
+                        <div class="flex items-center gap-2" x-data>
+                            <input id="teacher-hourly-rate-override" type="number" name="teacher_hourly_rate_override" 
+                                   x-ref="overrideInput"
+                                   class="flex-1 p-2 border-2 rounded-lg font-semibold text-center" 
+                                   placeholder="Laisser vide pour utiliser le taux standard"
+                                   value="{{ hourly_rate_override|default:'' }}"
+                                   min="1"
+                                   {% if session.status == 'COMPLETED' and not is_editing %}disabled{% endif %}>
+                            <button id="reset-hourly-rate" type="button"
+                                    @click="$refs.overrideInput.value = ''; $refs.overrideInput.focus()"
+                                    class="px-3 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 text-sm font-medium"
+                                    {% if session.status == 'COMPLETED' and not is_editing %}disabled{% endif %}>
+                                Réinitialiser
+                            </button>
+                        </div>
+                        <p class="text-xs text-gray-600 mt-2">
+                            💡 Remplissez pour surcharger le taux pour cette séance uniquement. Le taux standard du groupe reste inchangé.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Section Note de séance -->
+            <div class="bg-white p-4 rounded-lg border border-gray-200">
+                <label class="block text-sm font-bold text-gray-800 mb-3">📝 Note sur la séance (Cahier de texte)</label>
+                <textarea name="session_note" rows="3" class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-indigo-500" placeholder="Chapitre abordé, devoirs donnés..." {% if session.status == 'COMPLETED' and not is_editing %}disabled{% endif %}>{{ session.note }}</textarea>
+            </div>
+
+            <!-- Section Changement de créneau horaire -->
+            <div class="bg-white p-4 rounded-lg border border-gray-200">
+                <label class="block text-sm font-bold text-gray-800 mb-3">🕐 Modifier le créneau horaire de cette séance</label>
+                <div class="flex items-center gap-3 flex-wrap">
+                    <div class="flex items-center gap-2">
+                        <span class="text-sm font-medium text-gray-600">De</span>
+                        <input type="time" name="custom_start_time" class="w-32 p-2 border-2 rounded-lg text-center font-semibold" 
+                               value="{{ session.start_time|time:'H:i' }}"
+                               {% if session.status == 'COMPLETED' and not is_editing %}disabled{% endif %}>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-sm font-medium text-gray-600">à</span>
+                        <input type="time" name="custom_end_time" class="w-32 p-2 border-2 rounded-lg text-center font-semibold" 
+                               value="{{ session.end_time|time:'H:i' }}"
+                               {% if session.status == 'COMPLETED' and not is_editing %}disabled{% endif %}>
+                    </div>
+                </div>
+                <div class="mt-2 text-xs text-gray-600">
+                    <span class="text-blue-700">💡 La durée et la paie seront automatiquement recalculées : {{ session.start_time|time:"H:i" }} - {{ session.end_time|time:"H:i" }} = {{ duration_hours }}h</span>
+                    {% if session.is_ramadan %}
+                    <br><span class="text-amber-700 font-semibold">⚠️ Mode Ramadan actif : l'horaire d'affichage reste {{ session.cohort.ramadan_start_time|time:"H:i" }} - {{ session.cohort.ramadan_end_time|time:"H:i" }}, mais l'horaire de base est modifiable.</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="p-4 bg-gray-100 flex flex-col sm:flex-row justify-end gap-3">
+            {% if session.status == 'COMPLETED' and not is_editing %}
+                <a href="{% url 'academics:detail' session.cohort.id %}" class="w-full sm:w-auto text-center px-4 py-2 text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">Retour au Groupe</a>
+                <a href="?edit=1" class="w-full sm:w-auto text-center px-4 py-2 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 shadow-sm transition">✏️ Modifier</a>
+            {% else %}
+                <a href="{% url 'academics:detail' session.cohort.id %}" class="w-full sm:w-auto text-center px-4 py-2 text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">Annuler</a>
+                <button type="submit" class="w-full sm:w-auto px-6 py-2 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 shadow-sm transition">✅ Valider la Séance</button>
+            {% endif %}
+        </div>
+    </form>
+</div>
+
+{% if not session.status == 'COMPLETED' or is_editing %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const markAllPresentBtn = document.getElementById('mark-all-present');
+    const markAllAbsentBtn = document.getElementById('mark-all-absent');
+
+    function setAllStatuses(status) {
+        document.querySelectorAll('input[type="radio"][data-status="' + status + '"]').forEach(function (input) {
+            if (!input.disabled) {
+                input.checked = true;
+            }
+        });
+    }
+
+    if (markAllPresentBtn) {
+        markAllPresentBtn.addEventListener('click', function () {
+            setAllStatuses('PRESENT');
+        });
+    }
+
+    if (markAllAbsentBtn) {
+        markAllAbsentBtn.addEventListener('click', function () {
+            setAllStatuses('ABSENT');
+        });
+    }
+});
+</script>
+{% endif %}
+{% endblock %}

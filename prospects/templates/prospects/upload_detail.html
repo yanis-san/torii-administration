@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+
+{% block title %}Détails de l'import - {{ upload.filename }}{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-8" x-data="{ sections: { created: false, duplicates: false }, details: {} }">
+  <!-- Retour -->
+  <div class="mb-6">
+    <a href="{% url 'prospects:upload_history' %}" class="text-blue-600 hover:text-blue-700 font-medium">
+      ← Retour à l'historique
+    </a>
+  </div>
+
+  <!-- En-tête -->
+  <div class="bg-white rounded-lg shadow p-6 mb-6">
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h1 class="text-3xl font-bold text-slate-900">{{ upload.filename }}</h1>
+        <p class="text-slate-500 mt-1">
+          📅 {{ upload.created_at|date:"d/m/Y H:i" }}
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Résumé -->
+  <div class="grid grid-cols-4 gap-4 mb-6">
+    <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+      <div class="text-green-600 text-sm font-semibold">Créés</div>
+      <div class="text-3xl font-bold text-green-900">{{ upload.created_count }}</div>
+    </div>
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+      <div class="text-blue-600 text-sm font-semibold">Fusionnés</div>
+      <div class="text-3xl font-bold text-blue-900">{{ upload.updated_count }}</div>
+    </div>
+    <div class="bg-orange-50 border border-orange-200 rounded-lg p-4">
+      <div class="text-orange-600 text-sm font-semibold">Doublons</div>
+      <div class="text-3xl font-bold text-orange-900">{{ upload.duplicates_count }}</div>
+    </div>
+    <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+      <div class="text-red-600 text-sm font-semibold">Erreurs</div>
+      <div class="text-3xl font-bold text-red-900">{{ upload.errors_count }}</div>
+    </div>
+  </div>
+
+  <!-- Prospects Créés - Dépliable -->
+  {% if upload.created_list %}
+  <div class="bg-white rounded-lg shadow p-6 mb-6">
+    <button type="button" @click="sections.created = !sections.created" class="w-full text-left flex items-center gap-2 hover:bg-green-50 p-2 rounded -m-2 mb-2">
+      <span class="text-green-600 font-bold text-xl" x-text="sections.created ? '▼' : '▶'"></span>
+      <h2 class="text-2xl font-bold text-green-900 flex-1">
+        ✅ Prospects créés ({{ upload.created_count }})
+      </h2>
+    </button>
+
+    <div x-show="sections.created" x-collapse>
+      <div class="space-y-3">
+        {% for item in upload.created_list %}
+        <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="font-semibold text-green-900">
+                Ligne {{ item.row }}: {{ item.name }}
+              </div>
+              {% if item.email %}
+              <div class="text-sm text-green-700 mt-1">📧 {{ item.email }}</div>
+              {% endif %}
+            </div>
+            <div class="text-sm text-green-600 text-right">
+              <div class="font-medium">{{ item.reason }}</div>
+              <div class="text-xs text-green-500">ID: {{ item.prospect_id }}</div>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Doublons - Dépliable -->
+  {% if upload.duplicates_count > 0 %}
+  <div class="bg-white rounded-lg shadow p-6 mb-6">
+    <button type="button" @click="sections.duplicates = !sections.duplicates" class="w-full text-left flex items-center gap-2 hover:bg-slate-50 p-2 rounded -m-2 mb-2">
+      <span class="text-slate-600 font-bold text-xl" x-text="sections.duplicates ? '▼' : '▶'"></span>
+      <h2 class="text-2xl font-bold text-slate-900 flex-1">
+        🔄 Doublons détectés et fusionnés ({{ upload.duplicates_count }})
+      </h2>
+    </button>
+
+    <div x-show="sections.duplicates" x-collapse>
+      <div class="space-y-3">
+        {% for dup in upload.duplicates_data %}
+        <div class="bg-slate-50 border border-slate-200 rounded-lg p-4">
+          <button type="button" @click="details['d{{ forloop.counter0 }}'] = !details['d{{ forloop.counter0 }}']" class="w-full text-left flex items-center gap-2 hover:bg-slate-100 p-2 rounded -m-2">
+            <span class="text-slate-600 font-bold inline-block w-5" x-text="details['d{{ forloop.counter0 }}'] ? '▼' : '▶'"></span>
+            <span class="font-semibold text-slate-900">Ligne {{ dup.row }}: {{ dup.new.first_name }} {{ dup.new.last_name }}</span>
+            <span class="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded ml-auto">{{ dup.reasons|length }} critère(s)</span>
+          </button>
+
+          <div x-show="details['d{{ forloop.counter0 }}']" x-collapse class="mt-4 ml-4 pt-4 border-t border-slate-200">
+            <!-- Raisons -->
+            <div class="mb-4">
+              <h4 class="font-semibold text-slate-900 mb-2">Raisons du doublon:</h4>
+              <ul class="text-slate-600 space-y-1 ml-4">
+                {% for reason in dup.reasons %}
+                <li class="flex items-center gap-2">
+                  <span class="text-green-600">✓</span>
+                  <span>{{ reason }}</span>
+                </li>
+                {% endfor %}
+              </ul>
+            </div>
+
+            <!-- Comparaison -->
+            <div class="grid grid-cols-2 gap-4">
+              <!-- Nouveau (CSV) -->
+              <div class="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                <h5 class="font-semibold text-amber-900 mb-3">📥 Nouveau (CSV)</h5>
+                <div class="text-sm text-amber-900 space-y-1">
+                  {% if dup.new.email %}
+                  <div><span class="font-medium">Email:</span> {{ dup.new.email }}</div>
+                  {% endif %}
+                  {% if dup.new.phone %}
+                  <div><span class="font-medium">Téléphone:</span> {{ dup.new.phone }}</div>
+                  {% endif %}
+                  {% if dup.new.birth_date %}
+                  <div><span class="font-medium">Naissance:</span> {{ dup.new.birth_date }}</div>
+                  {% endif %}
+                  {% if dup.new.specific_course %}
+                  <div><span class="font-medium">Cours:</span> {{ dup.new.specific_course }}</div>
+                  {% endif %}
+                </div>
+              </div>
+
+              <!-- Existant (BD) -->
+              <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                <h5 class="font-semibold text-green-900 mb-3">✓ Existant (BD)</h5>
+                <div class="text-sm text-green-900 space-y-1">
+                  {% if dup.existing.email %}
+                  <div><span class="font-medium">Email:</span> {{ dup.existing.email }}</div>
+                  {% endif %}
+                  {% if dup.existing.phone %}
+                  <div><span class="font-medium">Téléphone:</span> {{ dup.existing.phone }}</div>
+                  {% endif %}
+                  {% if dup.existing.birth_date %}
+                  <div><span class="font-medium">Naissance:</span> {{ dup.existing.birth_date }}</div>
+                  {% endif %}
+                  {% if dup.existing.specific_course %}
+                  <div><span class="font-medium">Cours:</span> {{ dup.existing.specific_course }}</div>
+                  {% endif %}
+                  {% if dup.existing.id %}
+                  <div class="mt-2 pt-2 border-t border-green-300">
+                    <span class="text-xs text-green-600">ID Prospect: {{ dup.existing.id }}</span>
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-3 p-3 bg-blue-50 border border-blue-200 rounded text-sm text-blue-900">
+              ℹ️ <strong>Données fusionnées :</strong> Les informations les plus complètes ont été conservées. Le statut de conversion reste inchangé.
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Erreurs -->
+  {% if upload.errors_count > 0 %}
+  <div class="bg-white rounded-lg shadow p-6 mb-6">
+    <h2 class="text-2xl font-bold text-red-900 mb-4">
+      ⚠️ Erreurs ({{ upload.errors_count }})
+    </h2>
+    <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+      <ul class="text-red-800 space-y-2">
+        {% for error in upload.errors_data %}
+        <li class="flex items-start gap-2">
+          <span class="font-bold">✗</span>
+          <span>{{ error }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Statistiques finales -->
+  <div class="bg-white rounded-lg shadow p-6">
+    <h2 class="text-xl font-bold text-slate-900 mb-4">📊 Résumé de l'import</h2>
+    <div class="grid grid-cols-2 gap-4 text-sm">
+      <div>
+        <span class="text-slate-600">Total traité:</span>
+        <span class="font-bold text-slate-900 ml-2">{{ upload.total_processed }}</span>
+      </div>
+      <div>
+        <span class="text-slate-600">Succès:</span>
+        <span class="font-bold text-green-900 ml-2">{{ upload.created_count|add:upload.updated_count }}</span>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

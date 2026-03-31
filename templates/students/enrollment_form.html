@@ -1,0 +1,209 @@
+﻿{% load custom_filters %}
+{% load static %}
+<div class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" id="enrollment-modal" data-close-on-escape="true" data-submit-on-ctrl-enter="true"
+     x-data="{
+        prefillFromProspect() {
+            const raw = sessionStorage.getItem('prospect_prefill');
+            if (!raw) {
+                return;
+            }
+
+            try {
+                const data = JSON.parse(raw);
+                const setValue = (selector, value) => {
+                    const field = this.$el.querySelector(selector);
+                    if (field && value) {
+                        field.value = value;
+                    }
+                };
+
+                setValue('input[name=\"first_name\"]', data.first_name);
+                setValue('input[name=\"last_name\"]', data.last_name);
+                setValue('input[name=\"email\"]', data.email);
+                setValue('input[name=\"phone\"]', data.phone);
+                setValue('input[name=\"birth_date\"]', data.birth_date);
+                setValue('textarea[name=\"motivation\"]', data.motivation);
+
+                sessionStorage.removeItem('prospect_prefill');
+                this.$el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } catch (error) {
+                console.error('Erreur pre-remplissage:', error);
+            }
+        },
+        submitOnShortcut(event) {
+            if (!(event.ctrlKey || event.metaKey) || event.key !== 'Enter') {
+                return;
+            }
+            if (!this.$el.dataset.submitOnCtrlEnter) {
+                return;
+            }
+
+            event.preventDefault();
+            this.$refs.submitButton?.click();
+        }
+     }"
+     x-init="setTimeout(() => prefillFromProspect(), 100)"
+     @keydown.window="submitOnShortcut($event)">
+    <div class="relative top-10 mx-auto p-5 border w-full max-w-4xl shadow-lg rounded-md bg-white">
+
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-bold text-gray-900">
+                {% if student %}
+                    Nouvelle Inscription pour {{ student.first_name }} {{ student.last_name }}
+                {% else %}
+                    Nouvelle Inscription
+                {% endif %}
+            </h3>
+            <button type="button" data-remove-selector="#enrollment-modal" class="text-gray-500 hover:text-red-500 text-2xl">&times;</button>
+        </div>
+
+        <form hx-post="{% url 'create_enrollment' %}" hx-target="body" hx-swap="beforeend" enctype="multipart/form-data" hx-encoding="multipart/form-data">
+            {% csrf_token %}
+            {% if student %}
+                <input type="hidden" name="student_id" value="{{ student.id }}">
+            {% else %}
+                <!-- Avertissement sur les doublons -->
+                <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 flex items-start gap-3">
+                    <span class="text-2xl">⚠️</span>
+                    <div class="text-sm text-amber-800">
+                        <p class="font-semibold">Attention : Doublons autorisés</p>
+                        <p class="text-amber-700">Plusieurs élèves peuvent avoir le même email/téléphone (ex: frères/sœurs). Un nouvel élève sera créé à chaque inscription.</p>
+                    </div>
+                </div>
+            {% endif %}
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                <div class="bg-blue-50 p-4 rounded-lg">
+                    <h4 class="font-bold text-blue-700 mb-3">👤 Informations Élève</h4>
+
+                    <div class="grid grid-cols-2 gap-2 mb-3">
+                        <div>
+                            <label class="block text-gray-700 text-sm font-bold mb-2">Nom *</label>
+                            <input type="text" name="last_name" value="{{ student.last_name|default:'' }}" required class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight">
+                        </div>
+                        <div>
+                            <label class="block text-gray-700 text-sm font-bold mb-2">Prénom *</label>
+                            <input type="text" name="first_name" value="{{ student.first_name|default:'' }}" required class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="block text-gray-700 text-sm font-bold mb-2">Sexe</label>
+                        <select name="sex" class="shadow border rounded w-full py-2 px-3 text-gray-700 bg-white focus:outline-none">
+                            <option value="" {% if not student or not student.sex %}selected{% endif %}>--</option>
+                            <option value="F" {% if student and student.sex == "F" %}selected{% endif %}>F</option>
+                            <option value="H" {% if student and student.sex == "H" %}selected{% endif %}>H</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="block text-gray-700 text-sm font-bold mb-2">Date de naissance</label>
+                        <input type="date" name="birth_date" value="{% if student.birth_date %}{{ student.birth_date|date:'Y-m-d' }}{% endif %}" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="block text-gray-700 text-sm font-bold mb-2">Email</label>
+                        <input type="email" name="email" value="{{ student.email|default:'' }}" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2 mb-3">
+                        <div>
+                            <label class="block text-gray-700 text-sm font-bold mb-2">Téléphone *</label>
+                            <input type="text" name="phone" value="{{ student.phone|default:'' }}" required {% if student %}readonly class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight bg-gray-100"{% else %}class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight"{% endif %}>
+                        </div>
+                        <div>
+                            <label class="block text-gray-700 text-sm font-bold mb-2">Autre Tél</label>
+                            <input type="text" name="phone_2" value="{{ student.phone_2|default:'' }}" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight">
+                        </div>
+                    </div>
+
+                    <div class="mb-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-gray-700 text-sm font-bold mb-2">Photo (optionnel)</label>
+                            <input type="file" name="profile_picture" accept="image/*" class="block w-full text-sm text-gray-700 border rounded px-2 py-2">
+                            {% if student.profile_picture %}
+                                <p class="text-xs text-gray-500 mt-1">Actuelle : {{ student.profile_picture.name }}</p>
+                            {% endif %}
+                        </div>
+                        <div class="space-y-2">
+                            <label class="block text-gray-700 text-sm font-bold mb-2">Carte d'identité (recto/verso, optionnel)</label>
+                            <input type="file" name="id_card_front" accept="image/*" class="block w-full text-sm text-gray-700 border rounded px-2 py-2" placeholder="Recto">
+                            <input type="file" name="id_card_back" accept="image/*" class="block w-full text-sm text-gray-700 border rounded px-2 py-2" placeholder="Verso">
+                            {% if student.id_card_front or student.id_card_back %}
+                                <p class="text-xs text-gray-500">Fichiers actuels :
+                                    {% if student.id_card_front %}recto ✓ {% endif %}
+                                    {% if student.id_card_back %}verso ✓{% endif %}
+                                </p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="block text-gray-700 text-sm font-bold mb-2">Pourquoi nous rejoindre ?</label>
+                        <textarea name="motivation" rows="5" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight resize-y" placeholder="Ex: Préparation voyage, Passion manga...">{{ student.motivation|default:'' }}</textarea>
+                    </div>
+                </div>
+
+                <div class="bg-green-50 p-4 rounded-lg flex flex-col justify-between">
+                    <div>
+                        <h4 class="font-bold text-green-700 mb-3">📚 Cours & Tarif</h4>
+
+                        <div class="mb-3">
+                            <label class="block text-gray-700 text-sm font-bold mb-2">Choisir le Groupe (optionnel)</label>
+                            <select name="cohort_id" class="shadow border rounded w-full py-2 px-3 text-gray-700 bg-white focus:outline-none">
+                                <option value="">-- Ajouter ultérieurement --</option>
+                                {% for cohort in cohorts %}
+                                    <option value="{{ cohort.id }}">
+                                        {{ cohort.name }} (Standard: {{ cohort.standard_price|format_da }} DA)
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            <p class="text-xs text-gray-500 mt-1">Si vide, l'étudiant sera créé sans groupe. Vous pourrez l'inscrire après.</p>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="block text-gray-700 text-sm font-bold mb-2">Tarif Appliqué</label>
+                            <select name="tariff_id" class="shadow border rounded w-full py-2 px-3 text-gray-700 bg-white focus:outline-none">
+                                <option value="">-- Prix Standard du Groupe --</option>
+                                {% for tariff in tariffs %}
+                                    <option value="{{ tariff.id }}">{{ tariff.name }} ({{ tariff.amount|format_da }} DA)</option>
+                                {% endfor %}
+                            </select>
+                            <p class="text-xs text-gray-500 mt-1">Laissez vide pour utiliser le prix standard du groupe choisi.</p>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="block text-gray-700 text-sm font-bold mb-2">Réduction / Promo</label>
+                            <select name="discount_id" class="shadow border rounded w-full py-2 px-3 text-gray-700 bg-white focus:outline-none">
+                                <option value="">-- Aucune (Prix Standard) --</option>
+                                {% for discount in discounts %}
+                                    <option value="{{ discount.id }}">{{ discount.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <p class="text-xs text-gray-500 mt-1">Laissez vide pour appliquer le tarif standard du groupe.</p>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="block text-gray-700 text-sm font-bold mb-2">Mode de Paiement *</label>
+                            <select name="payment_plan" class="shadow border rounded w-full py-2 px-3 text-gray-700 bg-white focus:outline-none">
+                                <option value="FULL">Totalité (Une fois)</option>
+                                <option value="MONTHLY">Mensuel (Par tranches)</option>
+                                <option value="PACK">Pack d'Heures</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-6 flex justify-end gap-3 border-t pt-4">
+                <button type="button" data-remove-selector="#enrollment-modal" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded">
+                    Annuler
+                </button>
+                <button type="submit" x-ref="submitButton" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded shadow-lg transform transition hover:scale-105">
+                    ✅ Valider l'Inscription
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

@@ -1,0 +1,229 @@
+{% extends 'base.html' %}
+
+{% block title %}Paie des Professeurs par Cohort{% endblock %}
+
+{% block content %}
+<div class="space-y-4 sm:space-y-6">
+
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
+        <div>
+            <h1 class="text-xl sm:text-2xl font-bold text-gray-800">Paie des Professeurs par Cohort</h1>
+            <p class="text-gray-500 text-xs sm:text-sm">
+                Système professionnel avec calcul automatique des montants dûs
+            </p>
+        </div>
+    </div>
+
+    <!-- Filtres -->
+    <div class="bg-white p-3 sm:p-4 rounded-xl shadow-sm border border-gray-100">
+        <form method="get" class="flex flex-col sm:flex-row gap-3 sm:gap-4 items-end flex-wrap">
+            <div class="flex-1 min-w-fit w-full sm:w-auto">
+                <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Professeur</label>
+                <select name="teacher" class="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                    <option value="">-- Tous les professeurs --</option>
+                    {% for teacher in teachers %}
+                    <option value="{{ teacher.id }}" {% if teacher.id|stringformat:"s" == selected_teacher %}selected{% endif %}>
+                        {{ teacher.get_full_name }} ({{ teacher.assigned_cohorts.count }} cohorts)
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="flex-1 min-w-fit w-full sm:w-auto">
+                <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Début (Optionnel)</label>
+                <input type="date" name="start" value="{% if period_start %}{{ period_start|date:'Y-m-d' }}{% endif %}"
+                       class="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+            </div>
+            <div class="flex-1 min-w-fit w-full sm:w-auto">
+                <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Fin (Optionnel)</label>
+                <input type="date" name="end" value="{% if period_end %}{{ period_end|date:'Y-m-d' }}{% endif %}"
+                       class="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+            </div>
+            <button type="submit" class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-4 sm:px-6 py-2 rounded-lg font-medium transition shadow-sm text-sm sm:text-base">
+                Appliquer
+            </button>
+            <a href="?teacher={{ selected_teacher|default:'' }}" class="w-full sm:w-auto bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 sm:px-6 py-2 rounded-lg font-medium transition text-center text-sm sm:text-base">
+                Réinitialiser
+            </a>
+        </form>
+        <small class="text-gray-500 mt-2 block text-xs sm:text-sm">
+            💡 Laissez les dates vides pour voir toutes les séances sans filtre temporel
+        </small>
+    </div>
+
+    <!-- Tableau de paie par cohort -->
+    {% if payroll_data %}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        
+        <!-- Version desktop -->
+        <div class="hidden lg:block overflow-x-auto">
+        <table class="w-full text-left min-w-max">
+            <thead class="bg-gray-50 border-b border-gray-100">
+                <tr class="text-gray-500 text-xs uppercase">
+                    <th class="px-4 py-3 whitespace-nowrap">Professeur</th>
+                    <th class="px-4 py-3 whitespace-nowrap">Cohort</th>
+                    <th class="px-4 py-3 text-center whitespace-nowrap">Séances</th>
+                    <th class="px-4 py-3 text-right whitespace-nowrap">Heures</th>
+                    <th class="px-4 py-3 text-right whitespace-nowrap">Dû</th>
+                    <th class="px-4 py-3 text-right whitespace-nowrap">Reste</th>
+                    <th class="px-4 py-3 text-center whitespace-nowrap">Statut</th>
+                    <th class="px-4 py-3 text-center whitespace-nowrap">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for data in payroll_data %}
+                <tr class="hover:bg-gray-50 transition">
+                    <td class="px-4 py-3">
+                        <div class="flex flex-col gap-1">
+                            <div class="font-medium text-gray-800 text-sm">{{ data.teacher.get_full_name }}</div>
+                            {% if data.is_substitute %}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-700 w-fit">
+                                Remplaçant
+                            </span>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td class="px-4 py-3">
+                        <div class="font-medium text-gray-800 text-sm">{{ data.cohort.name }}</div>
+                        <div class="text-xs text-gray-500">
+                            Tarif standard: {{ data.cohort.teacher_hourly_rate }} DA/h
+                            {% if data.cohort.ramadan_teacher_hourly_rate %}
+                            <br><span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-orange-100 text-orange-800">
+                                Ramadan: {{ data.cohort.ramadan_teacher_hourly_rate }} DA/h{% if data.cohort.ramadan_actual_minutes %} · {{ data.cohort.ramadan_actual_minutes }} min{% endif %}
+                            </span>
+                            {% endif %}
+                            {% if data.is_substitute %}
+                            <br>Titulaire: {{ data.cohort.teacher.get_full_name }}
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td class="px-4 py-3 text-center">
+                        <span class="inline-flex items-center justify-center w-7 h-7 bg-indigo-100 text-indigo-600 rounded-full text-xs font-bold">
+                            {{ data.sessions_count }}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3 text-right font-medium text-gray-700 text-sm whitespace-nowrap">{{ data.total_hours }}h</td>
+                    <td class="px-4 py-3 text-right font-bold text-gray-800 text-sm whitespace-nowrap">{{ data.amount_due|floatformat:0 }}</td>
+                    <td class="px-4 py-3 text-right font-bold text-sm whitespace-nowrap {% if data.balance_due > 0 %}text-red-600{% else %}text-green-600{% endif %}">
+                        {{ data.balance_due|floatformat:0 }}
+                    </td>
+                    <td class="px-4 py-3 text-center">
+                        {% if data.is_paid %}
+                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700 whitespace-nowrap">
+                            ✓ Soldé
+                        </span>
+                        {% else %}
+                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700 whitespace-nowrap">
+                            ⏳ Impayé
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-3 text-center">
+                        <div class="flex gap-1 justify-center flex-nowrap">
+                            <a href="{% url 'finance:teacher_cohort_payment_detail' data.cohort.id %}?teacher={{ data.teacher.id }}{% if period_start %}&start={{ period_start|date:'Y-m-d' }}{% endif %}{% if period_end %}&end={{ period_end|date:'Y-m-d' }}{% endif %}"
+                               class="text-indigo-600 hover:text-indigo-800 font-medium text-xs px-2 py-1 border border-indigo-200 hover:border-indigo-600 rounded transition">
+                                Détails
+                            </a>
+                            {% if not data.is_paid %}
+                            <a href="{% url 'finance:record_cohort_payment' data.cohort.id %}?teacher={{ data.teacher.id }}{% if period_start %}&start={{ period_start|date:'Y-m-d' }}{% endif %}{% if period_end %}&end={{ period_end|date:'Y-m-d' }}{% endif %}&amount={{ data.balance_due }}"
+                               class="text-green-600 hover:text-green-800 font-medium text-xs px-2 py-1 border border-green-200 hover:border-green-600 rounded transition">
+                                Payer
+                            </a>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+
+        <!-- Version mobile -->
+        <div class="lg:hidden divide-y divide-gray-100">
+            {% for data in payroll_data %}
+            <div class="p-4 hover:bg-gray-50 transition">
+                <div class="flex items-start gap-3 mb-3">
+                    <div class="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-sm">
+                        {{ data.teacher.first_name|slice:":1" }}{{ data.teacher.last_name|slice:":1" }}
+                    </div>
+                    <div class="flex-1">
+                        <div class="font-semibold text-gray-800">{{ data.teacher.get_full_name }}</div>
+                        <div class="text-xs text-gray-500">
+                            {{ data.cohort.name }} • {{ data.cohort.teacher_hourly_rate }} DA/h
+                            {% if data.is_substitute %}
+                            <span class="inline-block bg-orange-100 text-orange-800 text-xs font-medium px-2 py-0.5 rounded ml-2">
+                                Remplaçant
+                            </span>
+                            {% endif %}
+                        </div>
+                        {% if data.is_substitute %}
+                        <div class="text-xs text-gray-500 mt-1">Titulaire: {{ data.cohort.teacher.get_full_name }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3 text-sm mb-3">
+                    <div>
+                        <span class="text-gray-500 text-xs">Séances</span>
+                        <div class="font-bold text-gray-800">{{ data.sessions_count }}</div>
+                    </div>
+                    <div>
+                        <span class="text-gray-500 text-xs">Heures</span>
+                        <div class="font-bold text-gray-800">{{ data.total_hours }}h</div>
+                    </div>
+                    <div>
+                        <span class="text-gray-500 text-xs">Dû</span>
+                        <div class="font-bold text-gray-800">{{ data.amount_due|floatformat:0 }} DA</div>
+                    </div>
+                    <div>
+                        <span class="text-gray-500 text-xs">Reste</span>
+                        <div class="font-bold {% if data.balance_due > 0 %}text-red-600{% else %}text-green-600{% endif %}">
+                            {{ data.balance_due|floatformat:0 }} DA
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex gap-2">
+                    {% if period_start and period_end %}
+                    <a href="{% url 'finance:teacher_cohort_payment_detail' data.cohort.id %}?teacher={{ data.teacher.id }}&start={{ period_start|date:'Y-m-d' }}&end={{ period_end|date:'Y-m-d' }}"
+                       class="flex-1 text-center text-indigo-600 hover:text-indigo-800 font-medium text-xs px-3 py-2 border border-indigo-200 hover:border-indigo-600 rounded transition">
+                        Détails
+                    </a>
+                    {% else %}
+                    <a href="{% url 'finance:teacher_cohort_payment_detail' data.cohort.id %}?teacher={{ data.teacher.id }}"
+                       class="flex-1 text-center text-indigo-600 hover:text-indigo-800 font-medium text-xs px-3 py-2 border border-indigo-200 hover:border-indigo-600 rounded transition">
+                        Détails
+                    </a>
+                    {% endif %}
+                    {% if not data.is_paid %}
+                        {% if period_start and period_end %}
+                        <a href="{% url 'finance:record_cohort_payment' data.cohort.id %}?teacher={{ data.teacher.id }}&start={{ period_start|date:'Y-m-d' }}&end={{ period_end|date:'Y-m-d' }}&amount={{ data.balance_due }}"
+                           class="flex-1 text-center text-green-600 hover:text-green-800 font-medium text-xs px-3 py-2 border border-green-200 hover:border-green-600 rounded transition">
+                            Payer
+                        </a>
+                        {% else %}
+                        <a href="{% url 'finance:record_cohort_payment' data.cohort.id %}?teacher={{ data.teacher.id }}&amount={{ data.balance_due }}"
+                           class="flex-1 text-center text-green-600 hover:text-green-800 font-medium text-xs px-3 py-2 border border-green-200 hover:border-green-600 rounded transition">
+                            Payer
+                        </a>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    {% else %}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
+        <p class="text-gray-400 text-lg mb-4">Aucune donnée de paie pour cette période</p>
+        <p class="text-gray-500 text-sm">Assurez-vous que:</p>
+        <ul class="text-gray-500 text-sm mt-2 space-y-1">
+            <li>• Des séances sont complétées (status = COMPLETED)</li>
+            <li>• Les professeurs ont un tarif horaire défini</li>
+            <li>• La période sélectionnée est correcte</li>
+        </ul>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

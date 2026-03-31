@@ -1,0 +1,93 @@
+{% load finance_filters %}
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/students/enrollment_edit_tariff_modal.css' %}">
+<div id="modal-edit-tariff" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 enrollment-edit-tariff-modal"
+     x-data="{
+         closeModal() {
+             this.$el.classList.add('is-closing');
+             window.setTimeout(() => this.$el.remove(), 200);
+         }
+     }"
+     @click.self="closeModal()"
+     @keydown.window.escape="closeModal()">
+    <div class="bg-white rounded-xl shadow-2xl max-w-md w-full max-h-screen overflow-y-auto">
+        <div class="sticky top-0 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white p-6 border-b border-indigo-800">
+            <div class="flex items-center justify-between">
+                <h2 class="text-xl font-bold">Modifier le tarif</h2>
+                <button type="button" @click.prevent="closeModal()" class="text-indigo-200 hover:text-white text-2xl leading-none">×</button>
+            </div>
+            <p class="text-sm text-indigo-100 mt-1">{{ enrollment.student.last_name }} {{ enrollment.student.first_name }} - {{ enrollment.cohort.name }}</p>
+        </div>
+
+        <form hx-post="{% url 'students:edit_tariff' enrollment.id %}" 
+              @htmx:before-request="closeModal()"
+              class="p-6">
+            {% csrf_token %}
+
+            <div class="mb-6">
+                <div class="text-sm text-gray-600 mb-2">Tarif actuel</div>
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div class="text-3xl font-bold text-blue-900">{{ enrollment.tariff.amount }} DA</div>
+                    {% if enrollment.is_standard_tariff %}
+                        <div class="text-xs text-blue-600 mt-1">Tarif standard du groupe</div>
+                    {% else %}
+                        <div class="text-xs text-orange-600 mt-1">Tarif personnalisé</div>
+                    {% endif %}
+                </div>
+                {% if enrollment.payments.exists %}
+                    <div class="mt-3 bg-amber-50 border border-amber-300 rounded-lg p-3">
+                        <div class="text-xs font-semibold text-amber-900">⚠️ Attention</div>
+                        <div class="text-xs text-amber-800 mt-1">
+                            <strong>{{ enrollment.payments.all|length }} paiement(s) déjà enregistré(s)</strong> pour un total de <strong>{{ enrollment.payments|payment_total }} DA</strong>
+                            <br class="mt-1">
+                            Modifier le tarif affectera le <strong>reste à payer</strong> pour cette inscription.
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="mb-6">
+                <label for="tariff_id" class="block text-sm font-semibold text-gray-700 mb-3">
+                    Sélectionner un nouveau tarif
+                </label>
+                <div class="space-y-2 max-h-96 overflow-y-auto">
+                    {% for tariff in tariffs %}
+                        <label class="flex items-center p-3 border-2 rounded-lg cursor-pointer transition hover:bg-gray-50 {% if tariff.id == current_tariff.id %}bg-indigo-50 border-indigo-400{% elif tariff.amount == enrollment.cohort.standard_price %}bg-blue-50 border-blue-300{% else %}border-gray-200{% endif %}">
+                            <input type="radio" 
+                                   name="tariff_id" 
+                                   value="{{ tariff.id }}"
+                                   {% if tariff.id == current_tariff.id %}checked{% endif %}
+                                   class="w-4 h-4 text-indigo-600">
+                            <div class="ml-3 flex-1">
+                                <div class="font-semibold text-gray-900">{{ tariff.amount }} DA</div>
+                                {% if tariff.amount == enrollment.cohort.standard_price %}
+                                    <div class="inline-block bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded font-semibold">📌 Standard du groupe</div>
+                                {% else %}
+                                    {% if tariff.description %}
+                                        <div class="text-xs text-gray-600">{{ tariff.description }}</div>
+                                    {% else %}
+                                        <div class="text-xs text-gray-500">Tarif personnalisé</div>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                        </label>
+                    {% empty %}
+                        <div class="text-sm text-gray-500 text-center py-4">Aucun tarif disponible</div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="flex gap-3">
+                <button type="button" 
+                        @click.prevent="closeModal()"
+                        class="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 font-semibold hover:bg-gray-50 transition">
+                    Annuler
+                </button>
+                <button type="submit" 
+                        class="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold transition">
+                    Appliquer
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

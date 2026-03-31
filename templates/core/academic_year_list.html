@@ -1,0 +1,222 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Années Scolaires{% endblock %}
+{% block content %}
+<div class="px-4 py-4"
+   data-academic-year-endpoint="{% url 'academic_year_list' %}"
+   x-data="{
+    modalOpen: false,
+    modalTitle: 'Ajouter une année scolaire',
+    formAction: 'add',
+    yearId: '',
+    label: '',
+    startDate: '',
+    endDate: '',
+    isCurrent: false,
+    get endpoint() {
+      return this.$el?.dataset?.academicYearEndpoint || '';
+    },
+    get csrfToken() {
+      return document.body?.dataset?.csrfToken || '';
+    },
+    openAddModal() {
+      this.modalTitle = 'Ajouter une année scolaire';
+      this.formAction = 'add';
+      this.yearId = '';
+      this.label = '';
+      this.startDate = '';
+      this.endDate = '';
+      this.isCurrent = false;
+      this.modalOpen = true;
+    },
+    openEditModal(yearId, yearLabel, yearStart, yearEnd) {
+      this.modalTitle = 'Modifier l\'année scolaire';
+      this.formAction = 'edit';
+      this.yearId = yearId || '';
+      this.label = yearLabel || '';
+      this.startDate = yearStart || '';
+      this.endDate = yearEnd || '';
+      this.isCurrent = false;
+      this.modalOpen = true;
+    },
+    closeModal() {
+      this.modalOpen = false;
+    },
+    async postAction(formData) {
+      if (!this.endpoint) {
+        window.alert('Erreur: endpoint introuvable');
+        return null;
+      }
+
+      try {
+        const response = await fetch(this.endpoint, {
+          method: 'POST',
+          headers: {
+            'X-CSRFToken': this.csrfToken
+          },
+          body: formData,
+          credentials: 'same-origin'
+        });
+        return await response.json();
+      } catch (error) {
+        window.alert('Erreur reseau');
+        return null;
+      }
+    },
+    async submitForm() {
+      const data = await this.postAction(new FormData(this.$refs.yearForm));
+      if (!data) {
+        return;
+      }
+
+      if (data.success) {
+        this.closeModal();
+        window.location.reload();
+        return;
+      }
+
+      window.alert('Erreur: ' + (data.error || 'inconnue'));
+    },
+    async runYearAction(action, yearId, confirmMessage) {
+      if (confirmMessage && !window.confirm(confirmMessage)) {
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('action', action);
+      formData.append('year_id', yearId);
+
+      const data = await this.postAction(formData);
+      if (!data) {
+        return;
+      }
+
+      if (data.success) {
+        window.location.reload();
+        return;
+      }
+
+      window.alert('Erreur: ' + (data.error || 'inconnue'));
+    }
+   }"
+   @keydown.window.escape="closeModal()">
+  <div class="flex items-center justify-between mb-4">
+    <h1 class="text-2xl font-semibold">Années Scolaires</h1>
+    <button type="button" @click="openAddModal()" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-medium">
+      + Ajouter une année
+    </button>
+  </div>
+
+  <div class="bg-white rounded-lg shadow overflow-hidden">
+    <table class="w-full">
+      <thead class="bg-slate-50">
+        <tr>
+          <th class="px-4 py-2 text-left text-slate-600 text-sm">Année</th>
+          <th class="px-4 py-2 text-left text-slate-600 text-sm">Début</th>
+          <th class="px-4 py-2 text-left text-slate-600 text-sm">Fin</th>
+          <th class="px-4 py-2 text-left text-slate-600 text-sm">Statut</th>
+          <th class="px-4 py-2 text-left text-slate-600 text-sm">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for year in years %}
+        <tr class="border-t hover:bg-slate-50">
+          <td class="px-4 py-3 font-medium">{{ year.label }}</td>
+          <td class="px-4 py-3 text-sm">{{ year.start_date|date:'d/m/Y' }}</td>
+          <td class="px-4 py-3 text-sm">{{ year.end_date|date:'d/m/Y' }}</td>
+          <td class="px-4 py-3">
+            {% if year.is_current %}
+              <span class="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">🎓 Actuelle</span>
+            {% else %}
+              <span class="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs">Inactive</span>
+            {% endif %}
+          </td>
+          <td class="px-4 py-3 text-sm">
+            <div class="flex items-center gap-2">
+              <button type="button"
+                      @click="openEditModal('{{ year.id }}', '{{ year.label|escapejs }}', '{{ year.start_date|date:'Y-m-d' }}', '{{ year.end_date|date:'Y-m-d' }}')"
+                      class="px-2 py-1 bg-amber-500 text-white rounded text-xs hover:bg-amber-600">
+                ✏️
+              </button>
+              {% if not year.is_current %}
+                <button type="button"
+                        @click="runYearAction('set_current', '{{ year.id }}', 'Activer cette année scolaire?')"
+                        class="px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600">
+                  Activer
+                </button>
+              {% endif %}
+              {% if not year.is_current %}
+                <button type="button"
+                        @click="runYearAction('delete', '{{ year.id }}', 'Êtes-vous sûr de vouloir supprimer cette année?')"
+                        class="px-2 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600">
+                  🗑️
+                </button>
+              {% else %}
+                <button disabled class="px-2 py-1 bg-gray-300 text-gray-500 rounded text-xs">🗑️</button>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="5" class="px-4 py-6 text-center text-slate-500">Aucune année scolaire.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal Ajouter/Modifier -->
+<div id="yearModal" x-show="modalOpen" x-cloak @click.self="closeModal()" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+  <div class="relative top-10 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="text-xl font-bold text-gray-900" id="modalTitle" x-text="modalTitle"></h3>
+      <button type="button" @click="closeModal()" class="text-gray-500 hover:text-red-500 text-2xl">&times;</button>
+    </div>
+
+    <form id="yearForm" x-ref="yearForm" @submit.prevent="submitForm()">
+      {% csrf_token %}
+      <input type="hidden" name="action" id="formAction" x-model="formAction">
+      <input type="hidden" name="year_id" id="yearId" x-model="yearId">
+
+      <div class="mb-4">
+        <label class="block text-gray-700 text-sm font-bold mb-2">Année (ex: 2025-2026) *</label>
+        <input type="text" name="label" id="labelInput" x-model="label" required placeholder="2025-2026"
+               class="shadow border rounded w-full py-2 px-3 text-gray-700">
+      </div>
+
+      <div class="mb-4">
+        <label class="block text-gray-700 text-sm font-bold mb-2">Date de début *</label>
+        <input type="date" name="start_date" id="startDateInput" x-model="startDate" required
+               class="shadow border rounded w-full py-2 px-3 text-gray-700">
+      </div>
+
+      <div class="mb-4">
+        <label class="block text-gray-700 text-sm font-bold mb-2">Date de fin *</label>
+        <input type="date" name="end_date" id="endDateInput" x-model="endDate" required
+               class="shadow border rounded w-full py-2 px-3 text-gray-700">
+      </div>
+
+      <div class="mb-4">
+        <label class="flex items-center">
+          <input type="checkbox" name="is_current" id="isCurrentInput" x-model="isCurrent"
+                 class="form-checkbox h-4 w-4 text-blue-600">
+          <span class="ml-2 text-sm text-gray-700">Rendre cette année active</span>
+        </label>
+      </div>
+
+      <div class="flex justify-end gap-3">
+        <button type="button" @click="closeModal()"
+                class="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400">
+          Annuler
+        </button>
+        <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+          Enregistrer
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}

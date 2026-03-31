@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="p-4" x-data="{ tab: 'overview' }">
+  <h1 class="text-2xl font-semibold mb-4">Rapports par Année Académique</h1>
+
+  <!-- Filtre année -->
+  <form method="get" class="flex items-end gap-2 mb-4">
+    <div>
+      <label class="block text-sm font-medium">Année Académique</label>
+      <select name="year" class="border rounded px-3 py-2 min-w-64">
+        <option value="all" {% if not selected_year %}selected{% endif %}>Toutes les années</option>
+        {% for y in years %}
+        <option value="{{ y.id }}" {% if selected_year and selected_year.id == y.id %}selected{% endif %}>{{ y.label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Filtrer</button>
+    <a href="{% url 'reports:academic_year_page' %}" class="px-4 py-2 border rounded hover:bg-gray-50">Réinitialiser</a>
+  </form>
+
+  <!-- Export global -->
+  <div class="flex gap-2 mb-4">
+    <a href="{% url 'reports:academic_year_pdf' %}?year={% if selected_year %}{{ selected_year.id }}{% else %}all{% endif %}" 
+       class="bg-emerald-600 text-white px-4 py-2 rounded hover:bg-emerald-700">
+      📄 Exporter PDF Global (tous les cohorts)
+    </a>
+  </div>
+
+  <!-- Onglets Alpine.js -->
+  <div class="border-b mb-3 flex gap-4">
+    <button :class="tab==='overview' ? 'border-b-2 border-blue-600 font-semibold' : ''" @click="tab='overview'">Vue d'ensemble</button>
+    <button :class="tab==='cohorts' ? 'border-b-2 border-blue-600 font-semibold' : ''" @click="tab='cohorts'">Cohorts</button>
+  </div>
+
+  <!-- Vue d'ensemble -->
+  <div x-show="tab==='overview'">
+    <div class="bg-white p-4 rounded shadow mb-4">
+      <h2 class="text-lg font-semibold mb-2">Statistiques</h2>
+      <div class="grid grid-cols-3 gap-4">
+        <div class="border p-3 rounded">
+          <div class="text-sm text-gray-600">Cohorts</div>
+          <div class="text-2xl font-bold">{{ cohorts.count }}</div>
+        </div>
+        <div class="border p-3 rounded">
+          <div class="text-sm text-gray-600">Inscriptions actives</div>
+          <div class="text-2xl font-bold">{{ total_enrollments }}</div>
+        </div>
+        <div class="border p-3 rounded">
+          <div class="text-sm text-gray-600">Année sélectionnée</div>
+          <div class="text-xl font-bold">{% if selected_year %}{{ selected_year.label }}{% else %}Toutes{% endif %}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
+      <p class="text-sm text-blue-800">
+        <strong>Info:</strong> Le rapport PDF global regroupe tous les étudiants inscrits par cohort/matière pour l'année choisie.
+        Vous pouvez aussi exporter chaque cohort individuellement ci-dessous.
+      </p>
+    </div>
+  </div>
+
+  <!-- Liste cohorts -->
+  <div x-show="tab==='cohorts'">
+    <div class="overflow-x-auto">
+      <table class="min-w-full border bg-white">
+        <thead>
+          <tr class="bg-gray-100">
+            <th class="p-2 border text-left">Cohort</th>
+            <th class="p-2 border text-left">Matière</th>
+            <th class="p-2 border text-left">Niveau</th>
+            <th class="p-2 border text-left">Année</th>
+            <th class="p-2 border text-left">Professeur</th>
+            <th class="p-2 border text-center">Inscrits</th>
+            <th class="p-2 border text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for cohort in cohorts %}
+          <tr>
+            <td class="p-2 border">{{ cohort.name }}</td>
+            <td class="p-2 border">{{ cohort.subject.name }}</td>
+            <td class="p-2 border">{{ cohort.level.name }}</td>
+            <td class="p-2 border">{{ cohort.academic_year.label }}</td>
+            <td class="p-2 border">{{ cohort.teacher.get_full_name }}</td>
+            <td class="p-2 border text-center">{{ cohort.enrollments.filter.is_active.count }}</td>
+            <td class="p-2 border text-center">
+              <a href="{% url 'reports:cohort_year_pdf' cohort.id %}" 
+                 class="bg-blue-600 text-white px-2 py-1 rounded text-sm hover:bg-blue-700">PDF</a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td class="p-2 text-center" colspan="7">Aucun cohort trouvé</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

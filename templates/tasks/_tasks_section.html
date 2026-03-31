@@ -1,0 +1,64 @@
+<!-- Section des filtres et liste (mise à jour ensemble par HTMX) -->
+<div class="space-y-6">
+    
+    <!-- Filtres et Recherche -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+        <div class="flex flex-col gap-4">
+            
+            <!-- Première ligne : Recherche -->
+            <div class="flex-1 relative">
+                <span class="absolute left-3 top-2.5 text-gray-400">🔍</span>
+                <input type="text" 
+                       name="q" 
+                       value="{{ search_query }}" 
+                       placeholder="Rechercher une tâche, personne..."
+                       class="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+                       hx-get="{% url 'tasks:list' %}"
+                       hx-trigger="keyup changed delay:500ms"
+                       hx-target="#tasks-wrapper"
+                       hx-include="[name='status'], [name='category']">
+            </div>
+
+            <!-- Deuxième ligne : Filtres -->
+            <div class="flex flex-wrap gap-2">
+                <!-- Filtre par statut -->
+                <div class="flex gap-2">
+                    <button 
+                        class="px-4 py-2 rounded-lg font-medium transition {% if filter_status == 'active' %}bg-indigo-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}"
+                        hx-get="{% url 'tasks:list' %}?status=active"
+                        hx-target="#tasks-wrapper"
+                        hx-include="[name='q'], [name='category']">
+                        📌 Actives
+                    </button>
+                    <button 
+                        class="px-4 py-2 rounded-lg font-medium transition {% if filter_status == 'completed' %}bg-green-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}"
+                        hx-get="{% url 'tasks:list' %}?status=completed"
+                        hx-target="#tasks-wrapper"
+                        hx-include="[name='q'], [name='category']">
+                        ✅ Terminées
+                    </button>
+                </div>
+
+                <!-- Filtre par catégorie -->
+                <select name="category"
+                        class="px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition font-medium"
+                        hx-get="{% url 'tasks:list' %}"
+                        hx-trigger="change"
+                        hx-target="#tasks-wrapper"
+                        hx-include="[name='q'], [name='status']">
+                    <option value="">📁 Toutes les catégories</option>
+                    {% for category in categories %}
+                        <option value="{{ category.id }}" {% if category_filter|stringformat:"s" == category.id|stringformat:"s" %}selected{% endif %}>
+                            {{ category.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Liste des Tâches -->
+    <div id="tasks-list">
+        {% include 'tasks/_task_list_partial.html' %}
+    </div>
+</div>

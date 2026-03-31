@@ -1,0 +1,131 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-6 gap-4">
+        <div>
+            <h2 class="text-2xl sm:text-3xl font-bold text-gray-800">Tableau de Bord Prospects</h2>
+            <p class="text-sm text-gray-500 mt-1">Analyse complète des prospects</p>
+        </div>
+        <a href="{% url 'prospects:list' %}" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium text-sm">
+            ← Retour à la liste
+        </a>
+    </div>
+
+    <!-- KPI CARDS -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div class="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg border border-blue-200">
+            <p class="text-xs text-blue-600 font-medium">Prospects Total</p>
+            <h3 class="text-3xl font-bold text-blue-800">{{ total_prospects }}</h3>
+            <p class="text-xs text-blue-600 mt-2">💼 En portefeuille</p>
+        </div>
+        <div class="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-lg border border-green-200">
+            <p class="text-xs text-green-600 font-medium">Convertis</p>
+            <h3 class="text-3xl font-bold text-green-800">{{ converted_count }}</h3>
+            <p class="text-xs text-green-600 mt-2">✅ Taux: {{ conversion_rate }}%</p>
+        </div>
+        <div class="bg-gradient-to-br from-amber-50 to-amber-100 p-4 rounded-lg border border-amber-200">
+            <p class="text-xs text-amber-600 font-medium">Conversions (Mois)</p>
+            <h3 class="text-3xl font-bold text-amber-800">{{ converted_last_month }}</h3>
+            <p class="text-xs text-amber-600 mt-2">📅 Ce mois</p>
+        </div>
+        <div class="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-lg border border-purple-200">
+            <p class="text-xs text-purple-600 font-medium">Conversions ({{ current_quarter }})</p>
+            <h3 class="text-3xl font-bold text-purple-800">{{ converted_last_quarter }}</h3>
+            <p class="text-xs text-purple-600 mt-2">📊 Trimestre actuel</p>
+        </div>
+    </div>
+
+    <!-- GRAPHIQUES PRINCIPAUX -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+        <!-- Conversions Timeline -->
+        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-100 h-96">
+            <h3 class="font-bold text-gray-800 mb-3">📈 Conversions par Mois</h3>
+            <canvas id="conversionsChart"></canvas>
+        </div>
+
+        <!-- Modalité (En ligne vs Présentiel) -->
+        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-100 h-96">
+            <h3 class="font-bold text-gray-800 mb-3">🏠 Préférences: En ligne vs Présentiel</h3>
+            <canvas id="modalityChart"></canvas>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+        <!-- Top Cours Demandés -->
+        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-100 h-96">
+            <h3 class="font-bold text-gray-800 mb-3">🎓 Cours Les Plus Demandés</h3>
+            <canvas id="coursesChart"></canvas>
+        </div>
+
+        <!-- Top Activités -->
+        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-100 h-96">
+            <h3 class="font-bold text-gray-800 mb-3">💼 Types d'Activités</h3>
+            <canvas id="activitiesChart"></canvas>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 gap-4 mb-6">
+        <!-- Sources -->
+        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-100 h-96">
+            <h3 class="font-bold text-gray-800 mb-3">📡 Sources des Prospects</h3>
+            <canvas id="sourcesChart"></canvas>
+        </div>
+    </div>
+
+    <!-- STATISTIQUES TEXTE -->
+    <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+        <h3 class="font-bold text-gray-800 mb-4">📊 Résumé Clé</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+            <div class="border-l-4 border-blue-600 pl-4">
+                <p class="text-gray-600 font-medium">Prospect Non Converti</p>
+                <p class="text-2xl font-bold text-blue-800">{{ unconverted_count }}</p>
+                <p class="text-xs text-gray-500 mt-1">À contacter</p>
+            </div>
+            <div class="border-l-4 border-green-600 pl-4">
+                <p class="text-gray-600 font-medium">Taux Conversion</p>
+                <p class="text-2xl font-bold text-green-800">{{ conversion_rate }}%</p>
+                <p class="text-xs text-gray-500 mt-1">Global</p>
+            </div>
+            <div class="border-l-4 border-orange-600 pl-4">
+                <p class="text-gray-600 font-medium">Intérêt Modalité</p>
+                <p class="text-2xl font-bold text-orange-800">
+                    {% if online_count > in_person_count %}
+                        💻 En ligne
+                    {% else %}
+                        🏫 Présentiel
+                    {% endif %}
+                </p>
+                <p class="text-xs text-gray-500 mt-1">Plus populaire</p>
+            </div>
+            <div class="border-l-4 border-purple-600 pl-4">
+                <p class="text-gray-600 font-medium">Tendance</p>
+                <p class="text-2xl font-bold text-purple-800">
+                    {% if converted_last_month > 0 %}
+                        ↗️ Positive
+                    {% else %}
+                        ↘️ Faible
+                    {% endif %}
+                </p>
+                <p class="text-xs text-gray-500 mt-1">Conversions mois</p>
+            </div>
+        </div>
+    </div>
+
+        <!-- CHART.JS LOCAL -->
+    <script src="{% static 'js/chart.umd.js' %}"></script>
+
+        <div id="prospect-dashboard-config"
+            class="hidden"
+            data-online-count="{{ online_count }}"
+            data-in-person-count="{{ in_person_count }}"></div>
+
+    {{ conversions_by_month|json_script:"conversions-data" }}
+    {{ courses_data|json_script:"courses-data" }}
+    {{ activities_data|json_script:"activities-data" }}
+    {{ levels_data|json_script:"levels-data" }}
+    {{ sources_data|json_script:"sources-data" }}
+
+    <script src="{% static 'js/prospects/prospect_dashboard.js' %}"></script>
+
+{% endblock %}

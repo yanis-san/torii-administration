@@ -1,0 +1,443 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-6 gap-4">
+        <div>
+            <h2 class="text-2xl sm:text-3xl font-bold text-gray-800">Bienvenue, {{ request.user.first_name }}</h2>
+            <p class="text-sm text-gray-500 mt-1">{{ today|date:"l d F Y" }}</p>
+        </div>
+        <div class="flex gap-3">
+            <a href="{% url 'download_schedule_pdf' %}"
+                    class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium text-sm transition">
+                📊 Emploi du Temps PDF
+            </a>
+            {% if not is_teacher %}
+            <button hx-get="{% url 'students:enrollment_form' %}" hx-target="body" hx-swap="beforeend"
+                    class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-medium text-sm">
+                + Inscription
+            </button>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if is_teacher %}
+    <!-- STATS PROF -->
+    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
+        <div class="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg border border-blue-200">
+            <p class="text-xs text-blue-600 font-medium">Étudiants</p>
+            <h3 class="text-2xl font-bold text-blue-800">{{ total_students }}</h3>
+        </div>
+        <div class="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-lg border border-purple-200">
+            <p class="text-xs text-purple-600 font-medium">Mes Classes</p>
+            <h3 class="text-2xl font-bold text-purple-800">{{ my_cohorts.count }}</h3>
+        </div>
+        <div class="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-lg border border-green-200">
+            <p class="text-xs text-green-600 font-medium">Cours (mois)</p>
+            <h3 class="text-2xl font-bold text-green-800">{{ completed_this_month }}</h3>
+        </div>
+    </div>
+
+    <!-- SÉANCE PROF EN ACCÈS DIRECT -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-100 mb-6 p-4 sm:p-5">
+        <div class="flex items-start justify-between gap-3 mb-3">
+            <div>
+                <h3 class="font-bold text-gray-800">🎯 Votre séance du jour</h3>
+                <p class="text-xs text-gray-500">Accès rapide dès connexion</p>
+            </div>
+            {% if featured_session %}
+                {% if featured_session.status == 'SCHEDULED' %}
+                    <a href="{% url 'academics:session_detail' featured_session.id %}" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition whitespace-nowrap">
+                        Faire l'appel
+                    </a>
+                {% else %}
+                    <a href="{% url 'academics:session_detail' featured_session.id %}" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg text-xs font-semibold transition whitespace-nowrap">
+                        Ouvrir
+                    </a>
+                {% endif %}
+            {% endif %}
+        </div>
+
+        {% if featured_session %}
+            <div class="rounded-lg border border-blue-200 bg-blue-50 p-3 sm:p-4">
+                <div class="flex items-center justify-between gap-3">
+                    <p class="text-sm font-semibold text-blue-900">
+                        {{ featured_session.start_time|time:"H:i" }} - {{ featured_session.end_time|time:"H:i" }} • {{ featured_session.cohort.name }}
+                    </p>
+                    {% if featured_timing == 'LIVE' %}
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-green-100 text-green-800 whitespace-nowrap">En cours</span>
+                    {% elif featured_timing == 'UPCOMING' and featured_in_minutes != None %}
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-indigo-100 text-indigo-800 whitespace-nowrap">Dans {{ featured_in_minutes }} min</span>
+                    {% endif %}
+                </div>
+                <p class="text-xs text-blue-700 mt-1">
+                    {{ featured_session.classroom.name }}
+                    <span class="mx-1">•</span>
+                    Statut: {{ featured_session.status }}
+                </p>
+                <div class="mt-3 flex flex-wrap gap-2">
+                    {% if featured_session.status == 'SCHEDULED' %}
+                        <form method="post" action="{% url 'academics:postpone_session' featured_session.id %}" data-confirm="Reporter cette séance ?\n\nUn rattrapage sera ajouté automatiquement à la fin du planning.">
+                            {% csrf_token %}
+                            <button type="submit" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-100 text-amber-800 hover:bg-amber-200 transition">
+                                Reporter
+                            </button>
+                        </form>
+                    {% elif featured_session.status == 'POSTPONED' %}
+                        <form method="post" action="{% url 'academics:cancel_postpone' featured_session.id %}" data-confirm="Annuler le report de cette séance ?\n\nLa séance reviendra en Prévu et le rattrapage sera supprimé.">
+                            {% csrf_token %}
+                            <button type="submit" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-100 text-blue-800 hover:bg-blue-200 transition">
+                                Annuler le report
+                            </button>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+        {% else %}
+            <div class="rounded-lg border border-gray-200 bg-gray-50 p-3 sm:p-4 text-sm text-gray-600">
+                Aucune séance aujourd'hui.
+            </div>
+        {% endif %}
+
+        <div class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+            <div class="rounded border border-gray-200 p-2 bg-white">
+                <p class="font-semibold text-gray-700 mb-0.5">Précédente</p>
+                {% if previous_session %}
+                    <p class="text-gray-600">{{ previous_session.date|date:"d/m" }} • {{ previous_session.start_time|time:"H:i" }} • {{ previous_session.cohort.name }}</p>
+                {% else %}
+                    <p class="text-gray-400">—</p>
+                {% endif %}
+            </div>
+            <div class="rounded border border-gray-200 p-2 bg-white">
+                <p class="font-semibold text-gray-700 mb-0.5">Prochaine</p>
+                {% if next_session %}
+                    <p class="text-gray-600">{{ next_session.date|date:"d/m" }} • {{ next_session.start_time|time:"H:i" }} • {{ next_session.cohort.name }}</p>
+                {% else %}
+                    <p class="text-gray-400">—</p>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if other_today_sessions %}
+        <div class="mt-3">
+            <p class="text-[11px] font-semibold text-gray-500 mb-2">Autres séances aujourd'hui</p>
+            <div class="flex gap-2 overflow-x-auto pb-1">
+                {% for s in other_today_sessions %}
+                <a href="{% url 'academics:session_detail' s.id %}" class="min-w-[180px] rounded border border-gray-200 bg-white p-2 hover:border-blue-300 hover:bg-blue-50 transition">
+                    <p class="text-xs font-semibold text-gray-800">{{ s.start_time|time:"H:i" }} - {{ s.end_time|time:"H:i" }}</p>
+                    <p class="text-[11px] text-gray-600 truncate">{{ s.cohort.name }}</p>
+                </a>
+                {% endfor %}
+            </div>
+            <div class="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {% for s in other_today_sessions %}
+                <div class="rounded border border-gray-200 bg-white p-2 flex items-center justify-between gap-2">
+                    <p class="text-[11px] text-gray-600 truncate">{{ s.start_time|time:"H:i" }} • {{ s.cohort.name }}</p>
+                    <div class="flex gap-1">
+                        {% if s.status == 'SCHEDULED' %}
+                        <form method="post" action="{% url 'academics:postpone_session' s.id %}" data-confirm="Reporter cette séance ?\n\nUn rattrapage sera ajouté automatiquement à la fin du planning.">
+                            {% csrf_token %}
+                            <button type="submit" class="px-2 py-1 rounded text-[11px] font-semibold bg-amber-100 text-amber-800 hover:bg-amber-200 transition">
+                                Reporter
+                            </button>
+                        </form>
+                        {% elif s.status == 'POSTPONED' %}
+                        <form method="post" action="{% url 'academics:cancel_postpone' s.id %}" data-confirm="Annuler le report de cette séance ?\n\nLa séance reviendra en Prévu et le rattrapage sera supprimé.">
+                            {% csrf_token %}
+                            <button type="submit" class="px-2 py-1 rounded text-[11px] font-semibold bg-blue-100 text-blue-800 hover:bg-blue-200 transition">
+                                Annuler
+                            </button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- MES CLASSES -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-100 mb-6 p-4">
+        <h3 class="font-bold text-gray-800 mb-3">Mes Classes</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {% for cohort in my_cohorts %}
+            <a href="{% url 'academics:detail' cohort.id %}" class="border border-gray-200 rounded p-3 hover:border-blue-400 hover:bg-blue-50 transition">
+                <h4 class="font-bold text-sm text-gray-800">{{ cohort.name }}</h4>
+                <p class="text-xs text-gray-600">{{ cohort.subject }} - {{ cohort.level }} • {{ cohort.enrollments.count }} étuds</p>
+            </a>
+            {% empty %}
+            <p class="text-gray-400 italic text-xs col-span-2">Aucune classe</p>
+            {% endfor %}
+        </div>
+    </div>
+
+    {% else %}
+    <!-- STATS ADMIN -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-4">
+        <div class="bg-gradient-to-br from-blue-50 to-blue-100 p-3 rounded border border-blue-200">
+            <p class="text-xs text-blue-600 font-medium">Étudiants</p>
+            <h3 class="text-xl font-bold text-blue-800">{{ total_students }}</h3>
+        </div>
+        <div class="bg-gradient-to-br from-green-50 to-green-100 p-3 rounded border border-green-200">
+            <p class="text-xs text-green-600 font-medium">Revenus</p>
+            <h3 class="text-lg font-bold text-green-800">{{ academic_year_income|floatformat:0|truncatewords:2 }}</h3>
+        </div>
+        <div class="bg-gradient-to-br from-amber-50 to-amber-100 p-3 rounded border border-amber-200">
+            <p class="text-xs text-amber-600 font-medium">Frais</p>
+            <h3 class="text-lg font-bold text-amber-800">{{ registration_fees_total|floatformat:0|truncatewords:2 }}</h3>
+        </div>
+        <div class="bg-gradient-to-br from-purple-50 to-purple-100 p-3 rounded border border-purple-200">
+            <p class="text-xs text-purple-600 font-medium">Cours</p>
+            <h3 class="text-lg font-bold text-purple-800">{{ sessions.count }}</h3>
+        </div>
+    </div>
+
+    <!-- FILTRES + GRAPHIQUES -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-4 mb-4">
+        <form method="get" class="flex flex-col sm:flex-row gap-2 sm:gap-3 items-start sm:items-end">
+            <div class="flex-1">
+                <label class="text-xs font-medium text-gray-600 block mb-1">Année Académique</label>
+                <select name="year" data-auto-submit="true" class="w-full px-2 py-1 border border-gray-300 rounded text-xs">
+                    {% for year in all_academic_years %}
+                    <option value="{{ year.id }}" {% if selected_year.id == year.id %}selected{% endif %}>{{ year.label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <a href="{% url 'dashboard' %}" class="bg-gray-200 text-gray-700 px-3 py-1 rounded text-xs font-medium">Réinitialiser</a>
+        </form>
+    </div>
+
+    <!-- FILTRES ACADÉMIQUE, LANGUE, MODALITÉ & TYPE -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-4 mb-4">
+        <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+            <div class="flex flex-col sm:flex-row gap-3 flex-1">
+                <!-- Filtre Année Académique -->
+                <div class="flex-1">
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">📅 Année Académique</label>
+                    <select id="yearFilter" data-dashboard-filter="true" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        {% for year in all_academic_years %}
+                        <option value="{{ year.id }}" {% if year.id == selected_year.id %}selected{% endif %}>
+                            {{ year.start_date|date:"Y" }}-{{ year.end_date|date:"Y" }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- Filtre Langue -->
+                <div class="flex-1">
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">🗣️ Filtre Langue</label>
+                    <select id="languageFilter" data-dashboard-filter="true" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">📊 Toutes les Langues</option>
+                        {% for lang in all_languages %}
+                        <option value="{{ lang.id }}" {% if lang.id|stringformat:"s" == filter_language %}selected{% endif %}>
+                            {{ lang.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Filtre Modalité -->
+                <div class="flex-1">
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">🏠 Modalité</label>
+                    <select id="modalityFilter" data-dashboard-filter="true" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">📊 Toutes les Modalités</option>
+                        <option value="IN_PERSON" {% if filter_modality == 'IN_PERSON' %}selected{% endif %}>🏫 Présentiel</option>
+                        <option value="ONLINE" {% if filter_modality == 'ONLINE' %}selected{% endif %}>💻 En Ligne</option>
+                    </select>
+                </div>
+
+                <!-- Filtre Type -->
+                <div class="flex-1">
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">👥 Type</label>
+                    <select id="typeFilter" data-dashboard-filter="true" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">📊 Tous les Types</option>
+                        <option value="group" {% if filter_type == 'group' %}selected{% endif %}>👥 Groupe</option>
+                        <option value="individual" {% if filter_type == 'individual' %}selected{% endif %}>👤 Individuel</option>
+                    </select>
+                </div>
+            </div>
+            
+            <button type="button" data-dashboard-reset="true" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300 transition whitespace-nowrap">
+                🔄 Réinitialiser
+            </button>
+        </div>
+    </div>
+
+    <!-- FILTRES INTERACTIFS DES GRAPHIQUES -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-4 mb-4">
+        <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+            <div class="flex flex-wrap gap-2">
+                <button type="button" data-dashboard-period="month" class="period-btn active px-4 py-2 rounded-lg font-medium text-sm transition" data-period="month">
+                    📅 Par Mois
+                </button>
+                <button type="button" data-dashboard-period="quarter" class="period-btn px-4 py-2 rounded-lg font-medium text-sm transition" data-period="quarter">
+                    📊 Par Trimestre
+                </button>
+                <button type="button" data-dashboard-period="year" class="period-btn px-4 py-2 rounded-lg font-medium text-sm transition" data-period="year">
+                    📈 Année Complète
+                </button>
+            </div>
+            <div class="flex gap-2">
+                <button type="button" data-dashboard-toggle="revenueDetail" class="px-3 py-2 rounded text-xs font-medium bg-green-100 text-green-700 hover:bg-green-200 transition">
+                    💰 Détails Revenus
+                </button>
+                <button type="button" data-dashboard-toggle="feesDetail" class="px-3 py-2 rounded text-xs font-medium bg-amber-100 text-amber-700 hover:bg-amber-200 transition">
+                    🎓 Détails Frais
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4 GRAPHIQUES EN 2x2 GRID -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-100 h-96" id="monthlyChartContainer">
+            <h3 class="font-bold text-sm text-gray-700 mb-2">📈 Revenus par <span id="period-label">Mois</span></h3>
+            <canvas id="monthlyChart"></canvas>
+        </div>
+        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-100 h-96" id="quarterlyChartContainer">
+            <h3 class="font-bold text-sm text-gray-700 mb-2">📊 Revenus par Trimestre</h3>
+            <canvas id="quarterlyChart"></canvas>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-100 h-96">
+            <h3 class="font-bold text-sm text-gray-700 mb-2">💰 Frais + Revenus</h3>
+            <canvas id="comparisonChart"></canvas>
+        </div>
+        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-100 h-96">
+            <h3 class="font-bold text-sm text-gray-700 mb-2">🗣️ Revenus par Langue</h3>
+            <canvas id="languageChart"></canvas>
+        </div>
+    </div>
+
+    <!-- COMPARAISON MODALITÉ & TYPE (2 graphiques) -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-100 h-96">
+            <h3 class="font-bold text-sm text-gray-700 mb-2">🏠 Présentiel vs En Ligne</h3>
+            <canvas id="modalityChart"></canvas>
+        </div>
+        <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-100 h-96">
+            <h3 class="font-bold text-sm text-gray-700 mb-2">👥 Groupe vs Individuel</h3>
+            <canvas id="typeChart"></canvas>
+        </div>
+    </div>
+
+    <!-- DÉTAILS REVENUS (Caché par défaut) -->
+    <div id="revenueDetail" class="bg-white rounded-lg shadow-sm border border-gray-100 p-4 mb-4 hidden">
+        <h3 class="font-bold text-gray-800 mb-3">📊 Détails des Revenus</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div class="bg-green-50 p-3 rounded border border-green-200">
+                <p class="text-xs text-green-600 font-medium">Revenus Totaux</p>
+                <p class="text-xl font-bold text-green-800">{{ academic_year_income|floatformat:0 }}</p>
+                <p class="text-xs text-green-600 mt-1">DZD</p>
+            </div>
+            <div class="bg-blue-50 p-3 rounded border border-blue-200">
+                <p class="text-xs text-blue-600 font-medium">Moyenne/Mois</p>
+                <p class="text-xl font-bold text-blue-800">
+                    {% if selected_year and selected_year.start_date %}
+                        {{ academic_year_income|floatformat:0|add:0|divisibleby:12|default:0 }}
+                    {% else %}
+                        —
+                    {% endif %}
+                </p>
+                <p class="text-xs text-blue-600 mt-1">DZD</p>
+            </div>
+            <div class="bg-purple-50 p-3 rounded border border-purple-200">
+                <p class="text-xs text-purple-600 font-medium">Meilleur Mois</p>
+                <p class="text-xl font-bold text-purple-800" id="bestMonth">—</p>
+            </div>
+            <div class="bg-orange-50 p-3 rounded border border-orange-200">
+                <p class="text-xs text-orange-600 font-medium">Croissance</p>
+                <p class="text-xl font-bold text-orange-800" id="growth">—</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- DÉTAILS FRAIS (Caché par défaut) -->
+    <div id="feesDetail" class="bg-white rounded-lg shadow-sm border border-gray-100 p-4 mb-4 hidden">
+        <h3 class="font-bold text-gray-800 mb-3">🎓 Détails des Frais d'Inscription</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div class="bg-amber-50 p-3 rounded border border-amber-200">
+                <p class="text-xs text-amber-600 font-medium">Frais Totaux Collectés</p>
+                <p class="text-xl font-bold text-amber-800">{{ registration_fees_total|floatformat:0 }}</p>
+                <p class="text-xs text-amber-600 mt-1">DZD</p>
+            </div>
+            <div class="bg-yellow-50 p-3 rounded border border-yellow-200">
+                <p class="text-xs text-yellow-600 font-medium">Étudiants Payés</p>
+                <p class="text-xl font-bold text-yellow-800">{{ paid_registrations_count }}</p>
+                <p class="text-xs text-yellow-600 mt-1">étudiants</p>
+            </div>
+            <div class="bg-red-50 p-3 rounded border border-red-200">
+                <p class="text-xs text-red-600 font-medium">Étudiants Non Payés</p>
+                <p class="text-xl font-bold text-red-800" id="unpaidCount">—</p>
+                <p class="text-xs text-red-600 mt-1">étudiants</p>
+            </div>
+            <div class="bg-green-50 p-3 rounded border border-green-200">
+                <p class="text-xs text-green-600 font-medium">Taux de Collecte</p>
+                <p class="text-xl font-bold text-green-800" id="collectRate">—</p>
+                <p class="text-xs text-green-600 mt-1">%</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- RÉSUMÉ COMPACT -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+        <div class="bg-gradient-to-br from-slate-50 to-slate-100 p-4 rounded-lg border border-slate-200">
+            <h3 class="font-bold text-gray-800 text-sm mb-3">Résumé Année</h3>
+            <div class="space-y-2 text-xs">
+                <div class="flex justify-between"><span>Revenus</span><span class="font-bold text-green-600">{{ academic_year_income|floatformat:0 }}</span></div>
+                <div class="flex justify-between pb-2 border-b"><span>Frais</span><span class="font-bold text-amber-600">{{ registration_fees_total|floatformat:0 }}</span></div>
+                <div class="flex justify-between pt-2"><span class="font-medium">TOTAL</span><span class="font-bold text-green-700">{{ academic_year_income|floatformat:0|add:registration_fees_total|floatformat:0 }}</span></div>
+            </div>
+        </div>
+        <div class="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg border border-blue-200">
+            <h3 class="font-bold text-gray-800 text-sm mb-3">Détails Frais</h3>
+            <div class="space-y-2 text-xs">
+                <div class="flex justify-between"><span>Étudiants Payés</span><span class="font-bold">{{ paid_registrations_count }}</span></div>
+                {% if selected_year %}<div class="flex justify-between"><span>Prix Unitaire</span><span class="font-bold">{{ selected_year.registration_fee_amount }} DZD</span></div>{% endif %}
+                <div class="flex justify-between pt-2 border-t"><span>Année</span><span class="font-bold">{% if selected_year %}{{ selected_year.label }}{% else %}—{% endif %}</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="dashboard-data"
+         data-monthly="{{ monthly_breakdown|safe|escapejs }}"
+         data-quarterly="{{ quarterly_data|safe|escapejs }}"
+         data-registration-fees="{{ registration_fees_total }}"
+         data-academic-income="{{ academic_year_income }}"
+            data-paid-registrations="{{ paid_registrations_count }}"
+         data-languages-income="{{ languages_income|safe|escapejs }}"
+         data-modality-income="{{ modality_income|safe|escapejs }}"
+         data-type-income="{{ type_income|safe|escapejs }}"
+         data-selected-year-id="{% if selected_year %}{{ selected_year.id }}{% endif %}">
+    </div>
+    <script src="{% static 'js/chart.umd.js' %}"></script>
+    <script src="{% static 'js/core/dashboard.js' %}"></script>
+    {% endif %}
+
+    <!-- PLANNING DU JOUR (pour tous) -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-4">
+        <h3 class="font-bold text-gray-800 mb-3">📅 Planning du Jour</h3>
+        {% if sessions %}
+        <div class="space-y-2">
+            {% for session in sessions %}
+            <div class="flex items-center justify-between p-2 sm:p-3 border border-gray-200 rounded hover:bg-gray-50 transition">
+                <div class="flex-1 min-w-0">
+                    <p class="font-semibold text-sm text-gray-800">{{ session.start_time|time:"H:i" }} - {{ session.cohort.name }}</p>
+                    <p class="text-xs text-gray-600">{{ session.teacher.first_name }} • {{ session.classroom.name }}</p>
+                </div>
+                {% if session.status == 'SCHEDULED' %}
+                <a href="{% url 'academics:session_detail' session.id %}" class="ml-2 bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-medium whitespace-nowrap">Appel</a>
+                {% else %}
+                <span class="ml-2 text-xs text-gray-500 whitespace-nowrap">{{ session.status }}</span>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-gray-400 italic text-xs">Aucun cours aujourd'hui</p>
+        {% endif %}
+    </div>
+{% endblock %}

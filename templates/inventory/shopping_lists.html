@@ -1,0 +1,148 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Listes d'Achat{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50">
+    <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <!-- En-tête -->
+        <div class="mb-8">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900">🛒 Listes d'Achat</h1>
+                    <p class="text-gray-600 mt-2">Gérer vos listes de courses et événements</p>
+                </div>
+                <a href="{% url 'admin:inventory_shoppinglist_add' %}" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition">
+                    ➕ Nouvelle liste
+                </a>
+            </div>
+        </div>
+
+        <!-- Filtres -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <form method="get" class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- Recherche -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Rechercher</label>
+                        <input type="text" name="search" value="{{ current_search }}" placeholder="Titre ou description..."
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+
+                    <!-- Statut -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Statut</label>
+                        <select name="status" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">Tous</option>
+                            <option value="draft" {% if current_status == "draft" %}selected{% endif %}>Brouillon</option>
+                            <option value="in_progress" {% if current_status == "in_progress" %}selected{% endif %}>En cours</option>
+                            <option value="completed" {% if current_status == "completed" %}selected{% endif %}>Complété</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Boutons -->
+                <div class="flex gap-3 justify-end">
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition">
+                        🔍 Filtrer
+                    </button>
+                    <a href="{% url 'inventory:shopping_lists' %}" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg transition">
+                        ↺ Réinitialiser
+                    </a>
+                </div>
+            </form>
+        </div>
+
+        <!-- Grille des listes -->
+        {% if lists %}
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {% for list in lists %}
+                <div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition transform hover:scale-105">
+                    <!-- En-tête de carte -->
+                    <div class="bg-gradient-to-r from-blue-500 to-blue-600 p-4">
+                        <h3 class="text-lg font-bold text-white truncate">🛒 {{ list.title }}</h3>
+                        <p class="text-blue-100 text-xs mt-1">
+                            Créée par {{ list.created_by.first_name }}
+                        </p>
+                    </div>
+
+                    <!-- Contenu -->
+                    <div class="p-4 space-y-3">
+                        <!-- Date d'événement -->
+                        {% if list.event_date %}
+                        <div class="flex items-center gap-2 text-sm">
+                            <span class="text-lg">📅</span>
+                            <span class="text-gray-700">{{ list.event_date|date:"d/m/Y" }}</span>
+                        </div>
+                        {% endif %}
+
+                        <!-- Nombre d'articles -->
+                        <div class="flex items-center gap-2 text-sm">
+                            <span class="text-lg">📝</span>
+                            <span class="text-gray-700">
+                                <span class="font-bold">{{ list.items.count }}</span> article(s)
+                                {% if list.items.count > 0 %}
+                                    - {{ list.items|dictsort:"is_purchased"|slice:":0" }} achetés
+                                {% endif %}
+                            </span>
+                        </div>
+
+                        <!-- Coût -->
+                        <div class="flex items-center gap-2 text-sm">
+                            <span class="text-lg">💰</span>
+                            <span class="text-gray-700">€<span class="font-bold">{{ list.total_cost|floatformat:2 }}</span></span>
+                        </div>
+
+                        <!-- Statut -->
+                        <div class="flex items-center gap-2">
+                            <span class="px-3 py-1 rounded-full text-xs font-bold 
+                            {% if list.status == 'completed' %}bg-green-100 text-green-800
+                            {% elif list.status == 'in_progress' %}bg-blue-100 text-blue-800
+                            {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                {% if list.status == 'completed' %}✅ Complété
+                                {% elif list.status == 'in_progress' %}🔄 En cours
+                                {% else %}📄 Brouillon{% endif %}
+                            </span>
+                        </div>
+
+                        <!-- Description -->
+                        {% if list.description %}
+                        <p class="text-sm text-gray-600 line-clamp-2">{{ list.description }}</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="bg-gray-50 px-4 py-3 border-t border-gray-200 flex gap-2">
+                        <a href="{% url 'inventory:shopping_list_detail' list.id %}" 
+                           class="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold py-2 px-3 rounded transition text-center">
+                            👁️ Voir
+                        </a>
+                        <a href="{% url 'inventory:shopping_list_pdf' list.id %}" 
+                           class="flex-1 bg-red-600 hover:bg-red-700 text-white text-sm font-bold py-2 px-3 rounded transition text-center">
+                            📄 PDF
+                        </a>
+                        <a href="{% url 'admin:inventory_shoppinglist_change' list.id %}" 
+                           class="flex-1 bg-gray-600 hover:bg-gray-700 text-white text-sm font-bold py-2 px-3 rounded transition text-center">
+                            ✎ Éditer
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Résumé -->
+            <div class="mt-8 bg-white rounded-lg shadow-md p-4 text-center">
+                <p class="text-gray-700 font-medium">Total: <span class="font-bold">{{ lists.count }}</span> liste(s)</p>
+            </div>
+        {% else %}
+            <div class="bg-white rounded-lg shadow-md p-12 text-center">
+                <p class="text-gray-600 mb-4 text-lg">Aucune liste d'achat trouvée</p>
+                <a href="{% url 'admin:inventory_shoppinglist_add' %}" class="text-blue-600 hover:text-blue-800 font-bold">
+                    ➕ Créer la première liste
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

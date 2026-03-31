@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #4f46e5; color: white; padding: 20px; border-radius: 8px 8px 0 0; }
+        .header h1 { margin: 0; font-size: 24px; }
+        .content { background-color: #f9fafb; border: 1px solid #e5e7eb; padding: 20px; }
+        .items-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        .items-table th { background-color: #4f46e5; color: white; padding: 10px; text-align: left; }
+        .items-table td { padding: 10px; border-bottom: 1px solid #e5e7eb; }
+        .items-table tr:nth-child(even) { background-color: #f3f4f6; }
+        .summary { background-color: #dbeafe; border-left: 4px solid #4f46e5; padding: 15px; margin-top: 20px; border-radius: 4px; }
+        .footer { background-color: #f3f4f6; padding: 15px; text-align: center; font-size: 12px; color: #6b7280; }
+        .purchased { text-decoration: line-through; color: #9ca3af; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- En-tête -->
+        <div class="header">
+            <h1>🛒 {{ shopping_list.title }}</h1>
+        </div>
+
+        <!-- Contenu principal -->
+        <div class="content">
+            <p>Bonjour,</p>
+            
+            <p>Voici la liste d'achat partagée : <strong>{{ shopping_list.title }}</strong></p>
+
+            {% if shopping_list.event_date %}
+            <p><strong>📅 Date d'événement:</strong> {{ shopping_list.event_date|date:"d/m/Y" }}</p>
+            {% endif %}
+
+            {% if shopping_list.description %}
+            <p><strong>📝 Description:</strong></p>
+            <p>{{ shopping_list.description }}</p>
+            {% endif %}
+
+            <!-- Tableau des articles -->
+            <table class="items-table">
+                <thead>
+                    <tr>
+                        <th>Article</th>
+                        <th>Quantité</th>
+                        <th>Prix U.</th>
+                        <th>Total</th>
+                        <th>État</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in items %}
+                    <tr>
+                        <td class="{% if item.is_purchased %}purchased{% endif %}">
+                            {% if item.is_purchased %}✅{% else %}⬜{% endif %}
+                            {{ item.get_item_name }}
+                        </td>
+                        <td>{{ item.quantity_needed }} {{ item.unit }}</td>
+                        <td>{% if item.unit_price %}€{{ item.unit_price|floatformat:2 }}{% else %}-{% endif %}</td>
+                        <td>{% if item.unit_price %}€{{ item.get_total_price|floatformat:2 }}{% else %}-{% endif %}</td>
+                        <td>
+                            {% if item.is_purchased %}
+                                <span style="color: #10b981;">✅ Acheté</span>
+                            {% else %}
+                                <span style="color: #f59e0b;">🕐 À acheter</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <!-- Résumé -->
+            <div class="summary">
+                <strong>📊 Résumé</strong>
+                <ul style="margin: 10px 0; padding-left: 20px;">
+                    <li>Total articles: <strong>{{ items.count }}</strong></li>
+                    <li>Achetés: <strong style="color: #10b981;">{{ purchased_count }}</strong></li>
+                    <li>Restants: <strong style="color: #f59e0b;">{{ items.count|add:"-"|add:purchased_count }}</strong></li>
+                    <li>Coût total: <strong style="color: #4f46e5;">€{{ shopping_list.total_cost|floatformat:2 }}</strong></li>
+                    <li>Statut: <strong>{{ shopping_list.get_status_display }}</strong></li>
+                </ul>
+            </div>
+
+            <p style="margin-top: 20px; text-align: center;">
+                <a href="http://{{ domain }}{% url 'inventory:shopping_list_detail' shopping_list.id %}" 
+                   style="background-color: #4f46e5; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; display: inline-block;">
+                    👁️ Voir la liste complète
+                </a>
+            </p>
+        </div>
+
+        <!-- Pied de page -->
+        <div class="footer">
+            <p>Email généré par le système de gestion d'inventaire</p>
+        </div>
+    </div>
+</body>
+</html>

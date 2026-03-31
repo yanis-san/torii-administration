@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block title %}Nouvelle Catégorie de Caisse{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <h1 class="text-3xl font-bold text-gray-800 mb-6">Créer une Catégorie de Caisse</h1>
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="mb-4">
+                <label class="block text-gray-700 text-sm font-bold mb-2">Nom de la catégorie *</label>
+                <input type="text" name="name" required 
+                       placeholder="Ex: Monnaie, JLPT, Caisse Principale"
+                       class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <p class="text-xs text-gray-500 mt-1">Doit être unique</p>
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-gray-700 text-sm font-bold mb-2">Description</label>
+                <textarea name="description" rows="3"
+                          placeholder="Ex: Argent pour rendre la monnaie aux étudiants"
+                          class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+            </div>
+
+            <div class="mb-6">
+                <label class="block text-gray-700 text-sm font-bold mb-2">Montant initial (DA)</label>
+                <input type="number" name="initial_amount" value="0" 
+                       class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <p class="text-xs text-gray-500 mt-1">Vous pouvez le modifier après</p>
+            </div>
+
+            <div class="flex gap-3">
+                <button type="submit" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-3 rounded-lg font-medium transition">
+                    Créer la Catégorie
+                </button>
+                <a href="{% url 'cash:dashboard' %}" class="flex-1 text-center bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-3 rounded-lg font-medium transition">
+                    Annuler
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

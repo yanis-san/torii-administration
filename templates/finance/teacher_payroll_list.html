@@ -1,0 +1,229 @@
+{% extends 'base.html' %}
+
+{% block title %}Paie des Professeurs{% endblock %}
+
+{% block content %}
+<div class="space-y-4 sm:space-y-6">
+
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
+        <div>
+            <h1 class="text-xl sm:text-2xl font-bold text-gray-800">Gestion de la Paie des Professeurs</h1>
+            <p class="text-gray-500 text-xs sm:text-sm">
+                {% if period_start and period_end %}Période : {{ period_start|date:"d/m/Y" }} au {{ period_end|date:"d/m/Y" }}{% else %}Affichage sans filtre temporel{% endif %}
+            </p>
+        </div>
+    </div>
+
+    <!-- Filtres de période -->
+    <div class="bg-white p-3 sm:p-4 rounded-xl shadow-sm border border-gray-100">
+        <form method="get" class="flex flex-col sm:flex-row gap-3 sm:gap-4 items-end">
+            <div class="flex-1 w-full">
+                <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Date de début (Optionnel)</label>
+                <input type="date" name="start" value="{% if period_start %}{{ period_start|date:'Y-m-d' }}{% endif %}"
+                       class="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+            </div>
+            <div class="flex-1 w-full">
+                <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Date de fin (Optionnel)</label>
+                <input type="date" name="end" value="{% if period_end %}{{ period_end|date:'Y-m-d' }}{% endif %}"
+                       class="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+            </div>
+            <button type="submit" class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-4 sm:px-6 py-2 rounded-lg font-medium transition shadow-sm text-sm sm:text-base">
+                Appliquer
+            </button>
+            <a href="?" class="w-full sm:w-auto bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 sm:px-6 py-2 rounded-lg font-medium transition text-center text-sm sm:text-base">
+                Réinitialiser
+            </a>
+        </form>
+    </div>
+
+    <!-- Tableau de paie -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+
+        <!-- Version mobile (format carte) -->
+        <div class="lg:hidden divide-y divide-gray-100">
+            {% for data in payroll_data %}
+            <div class="p-4 hover:bg-gray-50 transition">
+                <div class="flex items-start gap-3 mb-3">
+                    {% if data.teacher.profile_picture %}
+                        <img src="{{ data.teacher.profile_picture.url }}"
+                             alt="{{ data.teacher.get_full_name }}"
+                             class="w-12 h-12 rounded-full object-cover border-2 border-indigo-200">
+                    {% else %}
+                        <div class="w-12 h-12 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-sm">
+                            {{ data.teacher.first_name|slice:":1" }}{{ data.teacher.last_name|slice:":1" }}
+                        </div>
+                    {% endif %}
+                    <div class="flex-1">
+                        <div class="font-semibold text-gray-800 text-sm">
+                            {{ data.teacher.first_name }} {{ data.teacher.last_name }}
+                        </div>
+                        <div class="text-xs text-gray-500">{{ data.teacher.email }}</div>
+                        {% if data.profile %}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium mt-1
+                                {% if data.profile.preferred_payment_method == 'CASH' %}bg-green-50 text-green-700 border border-green-100
+                                {% elif data.profile.preferred_payment_method == 'TRANSFER' %}bg-blue-50 text-blue-700 border border-blue-100
+                                {% else %}bg-yellow-50 text-yellow-700 border border-yellow-100{% endif %}">
+                                {{ data.profile.get_preferred_payment_method_display }}
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3 text-xs mb-3">
+                    <div>
+                        <span class="text-gray-500">Séances:</span>
+                        <div class="font-semibold text-gray-800">{{ data.sessions_count }}</div>
+                    </div>
+                    <div>
+                        <span class="text-gray-500">Heures:</span>
+                        <div class="font-semibold text-gray-800">{{ data.total_hours }}h</div>
+                    </div>
+                    <div>
+                        <span class="text-gray-500">Montant gagné:</span>
+                        <div class="font-bold text-gray-800">{{ data.total_amount|floatformat:2 }} DA</div>
+                    </div>
+                    <div>
+                        <span class="text-gray-500">Déjà payé:</span>
+                        <div class="text-gray-600">{{ data.already_paid|floatformat:2 }} DA</div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <span class="text-gray-500 text-xs">Reste à payer:</span>
+                    <div>
+                        {% if data.balance_due > 0 %}
+                            <span class="font-bold text-red-600 bg-red-50 px-2 py-1 rounded text-sm">
+                                {{ data.balance_due|floatformat:2 }} DA
+                            </span>
+                        {% else %}
+                            <span class="font-bold text-green-600 bg-green-50 px-2 py-1 rounded text-sm">
+                                Soldé
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="flex gap-2 pt-3 border-t border-gray-100">
+                    <a href="{% url 'finance:teacher_payroll_detail' data.teacher.id %}?start={{ period_start|date:'Y-m-d' }}&end={{ period_end|date:'Y-m-d' }}"
+                       class="flex-1 text-center text-indigo-600 hover:text-indigo-900 font-medium text-sm border border-indigo-200 hover:border-indigo-600 px-3 py-2 rounded-lg transition">
+                        Détails
+                    </a>
+                    {% if data.balance_due > 0 %}
+                        <a href="{% url 'finance:record_teacher_payment' data.teacher.id %}?start={{ period_start|date:'Y-m-d' }}&end={{ period_end|date:'Y-m-d' }}&amount={{ data.balance_due }}"
+                           class="flex-1 text-center bg-green-600 hover:bg-green-700 text-white font-medium text-sm px-3 py-2 rounded-lg transition shadow-sm">
+                            Payer
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% empty %}
+            <div class="p-8 text-center text-gray-500 text-sm">
+                Aucun professeur trouvé.
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Version desktop (tableau) -->
+        <table class="hidden lg:table w-full text-left border-collapse">
+            <thead>
+                <tr class="bg-gray-50 text-gray-600 text-xs uppercase tracking-wider border-b border-gray-100">
+                    <th class="p-3 font-semibold">Professeur</th>
+                    <th class="p-3 font-semibold">Méthode</th>
+                    <th class="p-3 font-semibold text-center">Séances</th>
+                    <th class="p-3 font-semibold text-center">Heures</th>
+                    <th class="p-3 font-semibold text-right">Gagné</th>
+                    <th class="p-3 font-semibold text-right">Payé</th>
+                    <th class="p-3 font-semibold text-right">Reste</th>
+                    <th class="p-3 text-right font-semibold">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for data in payroll_data %}
+                <tr class="hover:bg-gray-50 transition">
+                    <td class="p-4">
+                        <div class="flex items-center gap-3">
+                            {% if data.teacher.profile_picture %}
+                                <img src="{{ data.teacher.profile_picture.url }}"
+                                     alt="{{ data.teacher.get_full_name }}"
+                                     class="w-10 h-10 rounded-full object-cover border-2 border-indigo-200">
+                            {% else %}
+                                <div class="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-sm">
+                                    {{ data.teacher.first_name|slice:":1" }}{{ data.teacher.last_name|slice:":1" }}
+                                </div>
+                            {% endif %}
+                            <div>
+                                <div class="font-semibold text-gray-800">
+                                    {{ data.teacher.first_name }} {{ data.teacher.last_name }}
+                                </div>
+                                <div class="text-xs text-gray-500">
+                                    {{ data.teacher.email }}
+                                    {% if data.teacher.age %}
+                                        <span class="ml-2 text-indigo-600">{{ data.teacher.age }} ans</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="p-4">
+                        {% if data.profile %}
+                            <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium
+                                {% if data.profile.preferred_payment_method == 'CASH' %}bg-green-50 text-green-700 border border-green-100
+                                {% elif data.profile.preferred_payment_method == 'TRANSFER' %}bg-blue-50 text-blue-700 border border-blue-100
+                                {% else %}bg-yellow-50 text-yellow-700 border border-yellow-100{% endif %}">
+                                {{ data.profile.get_preferred_payment_method_display }}
+                            </span>
+                        {% else %}
+                            <span class="text-gray-400 text-xs italic">Non configuré</span>
+                        {% endif %}
+                    </td>
+                    <td class="p-4 text-center font-medium text-gray-700">
+                        {{ data.sessions_count }}
+                    </td>
+                    <td class="p-4 text-center font-medium text-gray-700">
+                        {{ data.total_hours }}h
+                    </td>
+                    <td class="p-4 text-right font-bold text-gray-800">
+                        {{ data.total_amount|floatformat:2 }} DA
+                    </td>
+                    <td class="p-4 text-right text-gray-600">
+                        {{ data.already_paid|floatformat:2 }} DA
+                    </td>
+                    <td class="p-4 text-right">
+                        {% if data.balance_due > 0 %}
+                            <span class="font-bold text-red-600 bg-red-50 px-2 py-1 rounded">
+                                {{ data.balance_due|floatformat:2 }} DA
+                            </span>
+                        {% else %}
+                            <span class="font-bold text-green-600 bg-green-50 px-2 py-1 rounded">
+                                Soldé
+                            </span>
+                        {% endif %}
+                    </td>
+                    <td class="p-4 text-right">
+                        <div class="flex gap-2 justify-end">
+                            <a href="{% url 'finance:teacher_payroll_detail' data.teacher.id %}?start={{ period_start|date:'Y-m-d' }}&end={{ period_end|date:'Y-m-d' }}"
+                               class="text-indigo-600 hover:text-indigo-900 font-medium text-sm border border-indigo-200 hover:border-indigo-600 px-3 py-1 rounded-lg transition">
+                                Détails
+                            </a>
+                            {% if data.balance_due > 0 %}
+                                <a href="{% url 'finance:record_teacher_payment' data.teacher.id %}?start={{ period_start|date:'Y-m-d' }}&end={{ period_end|date:'Y-m-d' }}&amount={{ data.balance_due }}"
+                                   class="bg-green-600 hover:bg-green-700 text-white font-medium text-sm px-3 py-1 rounded-lg transition shadow-sm">
+                                    Payer
+                                </a>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="p-8 text-center text-gray-500">
+                        Aucun professeur trouvé.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+</div>
+{% endblock %}

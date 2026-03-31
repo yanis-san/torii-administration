@@ -1,0 +1,224 @@
+{% extends 'base.html' %}
+{% load custom_filters %}
+
+{% block title %}{{ category.name }} - Caisse{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+    <div class="mb-6">
+        <a href="{% url 'cash:dashboard' %}" class="text-indigo-600 hover:text-indigo-800 font-medium">← Retour à la caisse</a>
+    </div>
+
+    <div class="flex justify-between items-start mb-6">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800">{{ category.name }}</h1>
+            {% if category.description %}
+            <p class="text-gray-600 mt-1">{{ category.description }}</p>
+            {% endif %}
+        </div>
+          <form method="post" action="{% url 'cash:delete_category' category.id %}" 
+              data-confirm="ATTENTION : Supprimer cette catégorie et TOUTES ses transactions ?">
+            {% csrf_token %}
+            <button type="submit" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
+                Supprimer la catégorie
+            </button>
+        </form>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <h3 class="text-sm font-medium text-gray-500 mb-2">Montant Actuel</h3>
+            <p class="text-4xl font-bold text-indigo-600">{{ category.current_amount|format_da }} DA</p>
+            {% if category.last_reset %}
+            <p class="text-xs text-gray-400 mt-2">Reset le {{ category.last_reset|date:"d/m/Y à H:i" }}</p>
+            {% endif %}
+            {% if category.is_total %}
+            <p class="text-xs text-amber-600 font-medium mt-2">🔄 Calcul automatique</p>
+            {% endif %}
+        </div>
+
+        {% if not category.is_total %}
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <h3 class="text-sm font-medium text-gray-500 mb-4">Actions Rapides</h3>
+            <form method="post" action="{% url 'cash:reset_category' category.id %}" 
+                data-confirm="Remettre à 0 DA ?">
+                {% csrf_token %}
+                <button type="submit" class="w-full bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg font-medium transition mb-2">
+                    Reset à 0
+                </button>
+            </form>
+            <button data-toggle-class-target="#customResetModal" data-toggle-class-name="hidden" data-toggle-class-mode="remove"
+                    class="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition">
+                Reset Personnalisé
+            </button>
+        </div>
+        {% endif %}
+
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <h3 class="text-sm font-medium text-gray-500 mb-2">Transactions</h3>
+            <p class="text-2xl font-bold text-gray-700">{{ transactions.count }}</p>
+            <p class="text-xs text-gray-400 mt-1">Dernières opérations</p>
+        </div>
+    </div>
+
+    {% if not category.is_total %}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
+        <h2 class="text-xl font-bold text-gray-800 mb-4">Nouvelle Transaction</h2>
+        <form method="post" action="{% url 'cash:add_transaction' category.id %}">
+            {% csrf_token %}
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Type *</label>
+                    <select name="transaction_type" required 
+                            class="shadow border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="ADD">Ajout (+)</option>
+                        <option value="REMOVE">Retrait (-)</option>
+                        <option value="SET">Définir le montant</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Montant (DA) *</label>
+                    <input type="number" name="amount" required 
+                           class="shadow border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Note</label>
+                    <input type="text" name="note" placeholder="Ex: Rendu monnaie"
+                           class="shadow border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div class="flex items-end">
+                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition">
+                        Enregistrer
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+    {% else %}
+    <div class="bg-amber-50 border border-amber-200 rounded-xl p-6 mb-6">
+        <div class="flex items-center gap-3">
+            <span class="text-3xl">ℹ️</span>
+            <div>
+                <h3 class="text-lg font-bold text-amber-800 mb-1">Catégorie calculée automatiquement</h3>
+                <p class="text-amber-700">Le montant TOTAL est calculé automatiquement en fonction des autres catégories. Vous ne pouvez pas ajouter de transactions manuellement.</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+            <h3 class="font-bold text-gray-700">Historique des Transactions</h3>
+            <a href="{% url 'cash:export_transactions_pdf' category.id %}" 
+               class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V8z" clip-rule="evenodd" />
+                </svg>
+                Imprimer PDF
+            </a>
+        </div>
+
+        {% if transactions %}
+        <table class="w-full text-left">
+            <thead class="bg-gray-50 border-b border-gray-100">
+                <tr class="text-gray-500 text-xs uppercase">
+                    <th class="px-6 py-3">Date</th>
+                    {% if category.is_total %}
+                    <th class="px-6 py-3">Catégorie</th>
+                    {% endif %}
+                    <th class="px-6 py-3">Type</th>
+                    <th class="px-6 py-3 text-right">Montant</th>
+                    <th class="px-6 py-3 text-right">Avant</th>
+                    <th class="px-6 py-3 text-right">Après</th>
+                    <th class="px-6 py-3">Note</th>
+                    <th class="px-6 py-3">Par</th>
+                    <th class="px-6 py-3 text-center">Action</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for transaction in transactions %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 text-sm text-gray-700">{{ transaction.created_at|date:"d/m/Y H:i" }}</td>
+                    {% if category.is_total %}
+                    <td class="px-6 py-4 text-sm font-medium text-indigo-600">{{ transaction.category.name }}</td>
+                    {% endif %}
+                    <td class="px-6 py-4">
+                        {% if transaction.transaction_type == 'ADD' %}
+                        <span class="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-bold">Ajout</span>
+                        {% elif transaction.transaction_type == 'REMOVE' %}
+                        <span class="px-2 py-1 bg-red-100 text-red-700 rounded text-xs font-bold">Retrait</span>
+                        {% elif transaction.transaction_type == 'RESET' %}
+                        <span class="px-2 py-1 bg-amber-100 text-amber-700 rounded text-xs font-bold">Reset</span>
+                        {% else %}
+                        <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-bold">Définir</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 text-right font-medium text-gray-700">
+                        {% if transaction.transaction_type == 'ADD' %}+{% elif transaction.transaction_type == 'REMOVE' %}-{% endif %}{{ transaction.amount|format_da }} DA
+                    </td>
+                    <td class="px-6 py-4 text-right text-sm text-gray-500">{{ transaction.amount_before|format_da }} DA</td>
+                    <td class="px-6 py-4 text-right text-sm font-bold text-gray-700">{{ transaction.amount_after|format_da }} DA</td>
+                    <td class="px-6 py-4 text-sm text-gray-600">{{ transaction.note|default:"-" }}</td>
+                    <td class="px-6 py-4 text-sm text-gray-500">{{ transaction.created_by.first_name|default:"Équipe" }}</td>
+                    <td class="px-6 py-4 text-center">
+                        {% if not category.is_total and not transaction.category.is_total %}
+                        <form method="post" action="{% url 'cash:cancel_transaction' transaction.id %}" 
+                            data-confirm="Annuler cette transaction ? Le montant sera inversé." class="inline">
+                            {% csrf_token %}
+                            <button type="submit" class="text-red-600 hover:text-red-800 font-medium text-xs px-2 py-1 border border-red-200 hover:border-red-600 rounded transition">
+                                Annuler
+                            </button>
+                        </form>
+                        {% else %}
+                        <span class="text-gray-400 text-xs">-</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="p-12 text-center text-gray-400">
+            <p>Aucune transaction pour cette catégorie</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal Reset Personnalisé -->
+<div id="customResetModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-bold text-gray-900">Reset Personnalisé</h3>
+            <button data-toggle-class-target="#customResetModal" data-toggle-class-name="hidden" data-toggle-class-mode="add" class="text-gray-500 hover:text-red-500 text-2xl">&times;</button>
+        </div>
+        
+        <form method="post" action="{% url 'cash:custom_reset' category.id %}">
+            {% csrf_token %}
+            <div class="mb-4">
+                <label class="block text-gray-700 text-sm font-bold mb-2">Nouveau Montant (DA)</label>
+                <input type="number" name="new_amount" required 
+                       placeholder="Ex: 10000"
+                       class="shadow border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-gray-700 text-sm font-bold mb-2">Note / Raison</label>
+                <textarea name="reset_note" rows="3" required
+                          placeholder="Ex: Comptage du 16/12/2025"
+                          class="shadow border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+            </div>
+            
+            <div class="flex gap-3">
+                <button type="submit" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition">
+                    Appliquer
+                </button>
+                <button type="button" data-toggle-class-target="#customResetModal" data-toggle-class-name="hidden" data-toggle-class-mode="add"
+                        class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg font-medium transition">
+                    Annuler
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

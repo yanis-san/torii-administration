@@ -1,0 +1,105 @@
+{% load static %}
+<div class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" id="prospect-modal">
+  <div class="relative top-10 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white" data-close-on-escape="true">
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="text-xl font-bold text-gray-900">
+        {% if prospect %}Modifier le prospect{% else %}Ajouter un prospect{% endif %}
+      </h3>
+      <button type="button" data-remove-selector="#prospect-modal" class="text-gray-500 hover:text-red-500 text-2xl">&times;</button>
+    </div>
+
+    <form hx-post="{% if prospect %}{% url 'prospects:edit_prospect' prospect.id %}{% else %}{% url 'prospects:add_prospect' %}{% endif %}" 
+          hx-on::after-request="if(event.detail.successful) { document.getElementById('prospect-modal').remove(); window.location.reload(); }">
+      {% csrf_token %}
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label class="block text-gray-700 text-sm font-bold mb-2">Prénom *</label>
+          <input type="text" name="first_name" value="{{ prospect.first_name|default:'' }}" required 
+                 class="shadow border rounded w-full py-2 px-3 text-gray-700">
+        </div>
+        <div>
+          <label class="block text-gray-700 text-sm font-bold mb-2">Nom *</label>
+          <input type="text" name="last_name" value="{{ prospect.last_name|default:'' }}" required 
+                 class="shadow border rounded w-full py-2 px-3 text-gray-700">
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label class="block text-gray-700 text-sm font-bold mb-2">Email</label>
+          <input type="email" name="email" value="{{ prospect.email|default:'' }}" 
+                 class="shadow border rounded w-full py-2 px-3 text-gray-700">
+        </div>
+        <div>
+          <label class="block text-gray-700 text-sm font-bold mb-2">Téléphone</label>
+          <input type="text" name="phone" value="{{ prospect.phone|default:'' }}" 
+                 class="shadow border rounded w-full py-2 px-3 text-gray-700">
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+        <div>
+          <label class="block text-gray-700 text-sm font-bold mb-2">Date de naissance</label>
+          <input type="date" name="birth_date" value="{% if prospect.birth_date %}{{ prospect.birth_date|date:'Y-m-d' }}{% endif %}" 
+                 class="shadow border rounded w-full py-2 px-3 text-gray-700">
+        </div>
+        <div>
+          <label class="block text-gray-700 text-sm font-bold mb-2">Âge</label>
+          <input type="number" name="age" value="{{ prospect.age|default:'' }}" 
+                 class="shadow border rounded w-full py-2 px-3 text-gray-700">
+        </div>
+        <div>
+          <label class="block text-gray-700 text-sm font-bold mb-2">Niveau</label>
+          <input type="text" name="level" value="{{ prospect.level|default:'' }}" placeholder="Ex: Débutant, N5..."
+                 class="shadow border rounded w-full py-2 px-3 text-gray-700">
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label class="block text-gray-700 text-sm font-bold mb-2">Source</label>
+          <select name="source" class="shadow border rounded w-full py-2 px-3 text-gray-700 bg-white">
+            <option value="">--</option>
+            <option value="Site web" {% if prospect.source == "Site web" %}selected{% endif %}>Site web</option>
+            <option value="Téléphone" {% if prospect.source == "Téléphone" %}selected{% endif %}>Téléphone</option>
+            <option value="IRL" {% if prospect.source == "IRL" %}selected{% endif %}>IRL</option>
+            <option value="Autre" {% if prospect.source == "Autre" %}selected{% endif %}>Autre</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-gray-700 text-sm font-bold mb-2">Type d'activité</label>
+          <input type="text" name="activity_type" value="{{ prospect.activity_type|default:'' }}" placeholder="Ex: Cours, Événement..."
+                 class="shadow border rounded w-full py-2 px-3 text-gray-700">
+        </div>
+      </div>
+
+      <div class="mb-4">
+        <label class="block text-gray-700 text-sm font-bold mb-2">Cours spécifique</label>
+        <input type="text" name="specific_course" value="{{ prospect.specific_course|default:'' }}" placeholder="Ex: Japonais adultes, Préparation JLPT..."
+               class="shadow border rounded w-full py-2 px-3 text-gray-700">
+      </div>
+
+      <div class="mb-4">
+        <label class="block text-gray-700 text-sm font-bold mb-2">Message</label>
+        <textarea name="message" rows="3" class="shadow border rounded w-full py-2 px-3 text-gray-700 resize-y" placeholder="Message du prospect...">{{ prospect.message|default:'' }}</textarea>
+      </div>
+
+      <div class="mb-4">
+        <label class="block text-gray-700 text-sm font-bold mb-2">Notes internes</label>
+        <textarea name="notes" rows="2" class="shadow border rounded w-full py-2 px-3 text-gray-700 resize-y" placeholder="Notes privées...">{{ prospect.notes|default:'' }}</textarea>
+      </div>
+
+      <div class="flex justify-end gap-3">
+        <button type="button" data-remove-selector="#prospect-modal"
+                class="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400">
+          Annuler
+        </button>
+        <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+          {% if prospect %}Mettre à jour{% else %}Ajouter{% endif %}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+

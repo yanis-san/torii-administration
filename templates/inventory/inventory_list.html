@@ -1,0 +1,162 @@
+{% extends 'base.html' %}
+
+{% block title %}Articles en Inventaire{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50">
+    <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <!-- En-tête -->
+        <div class="mb-8">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900">📋 Articles en Inventaire</h1>
+                    <p class="text-gray-600 mt-2">Gestion complète des stocks</p>
+                </div>
+                <a href="{% url 'admin:inventory_inventoryitem_add' %}" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition">
+                    ➕ Ajouter
+                </a>
+            </div>
+        </div>
+
+        <!-- Filtres -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <form method="get" class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <!-- Recherche -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Rechercher</label>
+                        <input type="text" name="search" value="{{ current_search }}" placeholder="Nom ou description..."
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+
+                    <!-- Catégorie -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Catégorie</label>
+                        <select name="category" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">Toutes</option>
+                            {% for cat in categories %}
+                                <option value="{{ cat.id }}" {% if cat.id|stringformat:"s" == current_category %}selected{% endif %}>
+                                    {{ cat.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Statut -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Statut</label>
+                        <select name="status" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">Tous</option>
+                            <option value="ok" {% if current_status == "ok" %}selected{% endif %}>Stock OK</option>
+                            <option value="low_stock" {% if current_status == "low_stock" %}selected{% endif %}>Stock Faible</option>
+                            <option value="out_of_stock" {% if current_status == "out_of_stock" %}selected{% endif %}>Rupture</option>
+                        </select>
+                    </div>
+
+                    <!-- Obligatoires -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Filtre</label>
+                        <label class="flex items-center px-3 py-2 border border-gray-300 rounded-md cursor-pointer hover:bg-gray-50">
+                            <input type="checkbox" name="mandatory" value="true" {% if current_mandatory == "true" %}checked{% endif %}
+                                   class="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500">
+                            <span class="ml-2 text-sm text-gray-700">Seulement obligatoires</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Boutons -->
+                <div class="flex gap-3 justify-end">
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition">
+                        🔍 Filtrer
+                    </button>
+                    <a href="{% url 'inventory:inventory_list' %}" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg transition">
+                        ↺ Réinitialiser
+                    </a>
+                </div>
+            </form>
+        </div>
+
+        <!-- Tableau des articles -->
+        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+            {% if items %}
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-100 border-b-2 border-gray-300">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-900">Article</th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-900">Catégorie</th>
+                                <th class="px-4 py-3 text-center text-sm font-semibold text-gray-900">Stock Actuel</th>
+                                <th class="px-4 py-3 text-center text-sm font-semibold text-gray-900">Min</th>
+                                <th class="px-4 py-3 text-center text-sm font-semibold text-gray-900">Unité</th>
+                                <th class="px-4 py-3 text-center text-sm font-semibold text-gray-900">Statut</th>
+                                <th class="px-4 py-3 text-center text-sm font-semibold text-gray-900">Obligatoire</th>
+                                <th class="px-4 py-3 text-center text-sm font-semibold text-gray-900">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                            {% for item in items %}
+                            <tr class="hover:bg-gray-50 transition">
+                                <td class="px-4 py-3 text-sm font-medium text-gray-900">{{ item.name }}</td>
+                                <td class="px-4 py-3 text-sm text-gray-600">
+                                    <span x-data="{ color: '{{ item.category.color }}' }" :style="'background-color:' + color + '20; color:' + color"
+                                          class="inventory-category-chip inline-flex items-center px-2 py-1 rounded text-xs font-bold"
+                                          data-category-color="{{ item.category.color }}">
+                                        {{ item.category.name }}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-3 text-center text-sm font-bold">
+                                    {% if item.status == 'out_of_stock' %}
+                                        <span class="text-red-600">{{ item.quantity_current }}</span>
+                                    {% elif item.status == 'low_stock' %}
+                                        <span class="text-yellow-600">{{ item.quantity_current }}</span>
+                                    {% else %}
+                                        <span class="text-green-600">{{ item.quantity_current }}</span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-4 py-3 text-center text-sm text-gray-600">{{ item.quantity_min }}</td>
+                                <td class="px-4 py-3 text-center text-sm text-gray-600">{{ item.unit }}</td>
+                                <td class="px-4 py-3 text-center">
+                                    <span class="px-2 py-1 rounded-full text-xs font-bold 
+                                    {% if item.status == 'ok' %}bg-green-100 text-green-800
+                                    {% elif item.status == 'low_stock' %}bg-yellow-100 text-yellow-800
+                                    {% else %}bg-red-100 text-red-800{% endif %}">
+                                        {% if item.status == 'ok' %}✅ OK
+                                        {% elif item.status == 'low_stock' %}⚠️ Faible
+                                        {% else %}❌ Rupture{% endif %}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-3 text-center">
+                                    {% if item.is_mandatory %}
+                                        <span class="text-lg">🔴</span>
+                                    {% else %}
+                                        <span class="text-gray-400">○</span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-4 py-3 text-center">
+                                    <a href="{% url 'admin:inventory_inventoryitem_change' item.id %}" 
+                                       class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                                        ✎ Éditer
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Résumé -->
+                <div class="bg-gray-50 px-4 py-3 border-t border-gray-200 text-sm text-gray-700 font-medium">
+                    Total: <span class="font-bold">{{ items.count }}</span> article(s)
+                </div>
+            {% else %}
+                <div class="px-6 py-12 text-center">
+                    <p class="text-gray-600 mb-4">Aucun article trouvé</p>
+                    <a href="{% url 'admin:inventory_inventoryitem_add' %}" class="text-blue-600 hover:text-blue-800 font-medium">
+                        ➕ Créer le premier article
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,248 @@
+{% extends 'base.html' %}
+
+{% block title %}Rapports et Documents PDF{% endblock %}
+
+{% block content %}
+<div class="space-y-6" x-data="{ tab: 'synthese' }">
+
+    <!-- En-tête -->
+    <div class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-6 rounded-xl shadow-lg">
+        <h1 class="text-3xl font-bold">📄 Rapports et Documents PDF</h1>
+        <p class="text-purple-100 mt-2">Choisissez une catégorie ci-dessous pour générer vos rapports</p>
+    </div>
+
+    <!-- Accès rapide : Documents PDF par cohort -->
+    <div class="bg-gradient-to-r from-indigo-50 to-purple-50 border-2 border-indigo-300 rounded-xl overflow-hidden shadow-sm">
+        <div class="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-3">
+            <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                📋 Documents PDF Groupes & Rapports
+            </h2>
+        </div>
+        <div class="p-6 space-y-3">
+            <p class="text-sm text-gray-700">
+                <strong>Nouveau :</strong> Générez des rapports PDF professionnels avec logo et timestamp pour chaque groupe.
+            </p>
+            <a href="{% url 'documents:select_cohort' %}" class="inline-block bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg font-semibold transition shadow-sm">
+                Ouvrir l'espace Documents →
+            </a>
+        </div>
+    </div>
+
+    <!-- Accès rapide : Certificats -->
+    <div class="bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-300 rounded-xl overflow-hidden shadow-sm">
+        <div class="bg-gradient-to-r from-amber-500 to-orange-600 px-6 py-3">
+            <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path>
+                </svg>
+                🏆 Certificats de Fin de Niveau
+            </h2>
+        </div>
+        <div class="p-6 space-y-3">
+            <p class="text-sm text-gray-700">
+                Générez des certificats personnalisés pour vos étudiants de <strong>Chinois</strong>, <strong>Coréen</strong> et <strong>Japonais</strong> 
+                (critère: &gt;50% de présence aux séances validées).
+            </p>
+            <a href="{% url 'certificate:cohort_list' %}" class="inline-block bg-amber-500 hover:bg-amber-600 text-white px-6 py-2 rounded-lg font-semibold transition shadow-sm">
+                Générer des certificats →
+            </a>
+        </div>
+    </div>
+
+    <!-- Onglets -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+        <div class="flex flex-wrap gap-2 p-2 border-b border-gray-200">
+            <button @click="tab='synthese'" :class="tab==='synthese' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700'" class="px-4 py-2 rounded-lg font-medium shadow-sm">Synthèse</button>
+            <button @click="tab='caisse'" :class="tab==='caisse' ? 'bg-emerald-600 text-white' : 'bg-white text-gray-700'" class="px-4 py-2 rounded-lg font-medium shadow-sm">Caisse</button>
+            <button @click="tab='annuels'" :class="tab==='annuels' ? 'bg-purple-600 text-white' : 'bg-white text-gray-700'" class="px-4 py-2 rounded-lg font-medium shadow-sm">Annuels</button>
+            <button @click="tab='etudiants'" :class="tab==='etudiants' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700'" class="px-4 py-2 rounded-lg font-medium shadow-sm">Étudiants</button>
+            <button @click="tab='seances'" :class="tab==='seances' ? 'bg-green-600 text-white' : 'bg-white text-gray-700'" class="px-4 py-2 rounded-lg font-medium shadow-sm">Séances</button>
+            <button @click="tab='paiements'" :class="tab==='paiements' ? 'bg-yellow-600 text-white' : 'bg-white text-gray-700'" class="px-4 py-2 rounded-lg font-medium shadow-sm">Paiements</button>
+        </div>
+
+        <div class="p-4 md:p-6 space-y-6">
+            <!-- Tab: Synthèse -->
+            <div x-show="tab==='synthese'" x-cloak class="space-y-6">
+                <!-- Statistiques rapides -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                        <div class="text-sm text-gray-500 uppercase font-medium">Étudiants</div>
+                        <div class="text-2xl font-bold text-gray-800 mt-1">{{ total_students }}</div>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                        <div class="text-sm text-gray-500 uppercase font-medium">Groupes</div>
+                        <div class="text-2xl font-bold text-gray-800 mt-1">{{ total_cohorts }}</div>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                        <div class="text-sm text-gray-500 uppercase font-medium">Séances</div>
+                        <div class="text-2xl font-bold text-gray-800 mt-1">{{ total_sessions }}</div>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                        <div class="text-sm text-gray-500 uppercase font-medium">Professeurs</div>
+                        <div class="text-2xl font-bold text-gray-800 mt-1">{{ total_teachers }}</div>
+                    </div>
+                </div>
+
+
+
+                <!-- Astuces -->
+                <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-lg">
+                    <p class="font-semibold mb-1">💡 Conseils d'utilisation</p>
+                    <ul class="text-sm text-blue-800 list-disc list-inside space-y-1">
+                        <li>Les PDF s'ouvrent dans un nouvel onglet</li>
+                        <li>Tous les rapports incluent la date de génération</li>
+                        <li>Les données sont à jour au moment du clic</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Tab: Caisse -->
+            <div x-show="tab==='caisse'" x-cloak class="space-y-4">
+                <div class="p-4 bg-gray-50 rounded-lg border border-emerald-200">
+                    <h3 class="font-semibold text-emerald-800 mb-1">Rapports Caisse</h3>
+                    <p class="text-sm text-gray-700">Catégories, transactions et synthèse avec filtres de dates. Exports PDF/CSV.</p>
+                </div>
+                <div class="flex items-center justify-between p-4 bg-white rounded-lg border">
+                    <div>
+                        <h4 class="font-semibold text-gray-800">Ouvrir l'espace Caisse</h4>
+                        <p class="text-sm text-gray-600">Onglets Alpine.js dédiés aux rapports de caisse.</p>
+                    </div>
+                    <a href="{% url 'reports:cash_page' %}" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-medium transition shadow-sm">Page Caisse</a>
+                </div>
+            </div>
+
+            <!-- Tab: Annuels -->
+            <div x-show="tab==='annuels'" x-cloak class="space-y-4">
+                <div class="p-4 bg-gray-50 rounded-lg border border-purple-200">
+                    <h3 class="font-semibold text-purple-800 mb-1">Rapports Annuels (Année Académique)</h3>
+                    <p class="text-sm text-gray-700">PDF groupé matière→groupe, CSV à plat, et ZIP (un PDF par groupe). Inclut la colonne "Actif".</p>
+                </div>
+                <div class="flex items-center justify-between p-4 bg-white rounded-lg border">
+                    <div>
+                        <h4 class="font-semibold text-gray-800">Sélection par année</h4>
+                        <p class="text-sm text-gray-600">Filtrez par année (ou toutes) puis exportez.</p>
+                    </div>
+                    <a href="{% url 'reports:annual_menu' %}" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-medium transition shadow-sm">Ouvrir</a>
+                </div>
+
+                <div class="p-4 bg-white rounded-lg border">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h4 class="font-semibold text-gray-800">Frais d'inscription NON PAYÉS</h4>
+                            <p class="text-sm text-gray-600">Liste des étudiants inscrits sur l'année active (ou sélectionnée) n'ayant pas réglé les frais annuels.</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <a href="{% url 'reports:annual_fees_unpaid_pdf' %}" class="bg-rose-600 hover:bg-rose-700 text-white px-4 py-2 rounded-lg font-medium transition shadow-sm">PDF (année active)</a>
+                            <a href="{% url 'reports:annual_fees_unpaid_csv' %}" class="bg-rose-500 hover:bg-rose-600 text-white px-4 py-2 rounded-lg font-medium transition shadow-sm">CSV</a>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-2">Astuce: vous pouvez aussi passer des filtres GET (ex: ?year=2025&subject=3&cohort=12).</p>
+                </div>
+            </div>
+
+            <!-- Tab: Étudiants -->
+            <div x-show="tab==='etudiants'" x-cloak class="space-y-4">
+                <div class="p-4 bg-gray-50 rounded-lg border border-blue-200">
+                    <h3 class="font-semibold text-blue-800 mb-1">Rapports Étudiants</h3>
+                    <p class="text-sm text-gray-700">Listes globales et par groupe. Utile pour présence et contact.</p>
+                </div>
+                <div class="flex items-center justify-between p-4 bg-white rounded-lg border">
+                    <div class="flex-1">
+                        <h4 class="font-semibold text-gray-800">Liste complète des étudiants</h4>
+                        <p class="text-sm text-gray-600">Tous les étudiants actifs avec coordonnées et inscriptions.</p>
+                    </div>
+                    <a href="{% url 'reports:students_all' %}" target="_blank" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition shadow-sm">Générer PDF</a>
+                </div>
+                <div class="p-4 bg-white rounded-lg border">
+                    <h4 class="font-semibold text-gray-800 mb-2">Étudiants par groupe</h4>
+                    <p class="text-sm text-gray-600 mb-3">Choisissez un groupe pour générer sa liste.</p>
+                    <form method="get" action="" class="flex gap-3">
+                        <select id="cohort-select" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                            <option value="">-- Sélectionnez un groupe --</option>
+                            {% load academics_extras %}
+                            {% get_all_cohorts as cohorts %}
+                            {% for cohort in cohorts %}
+                            <option value="{% url 'reports:cohort_students' cohort.id %}">{{ cohort.name }} - {{ cohort.subject.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <button type="button" data-window-open-select="#cohort-select" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition shadow-sm">Générer</button>
+                    </form>
+                </div>
+                <div class="flex items-center justify-between p-4 bg-white rounded-lg border">
+                    <div>
+                        <h4 class="font-semibold text-gray-800">Fidélisation (CSV)</h4>
+                        <p class="text-sm text-gray-600">Étudiants ayant au moins 2 inscriptions.</p>
+                    </div>
+                    <a href="{% url 'reports:retained_students_csv' %}" class="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg font-medium transition shadow-sm">Télécharger CSV</a>
+                </div>
+            </div>
+
+            <!-- Tab: Séances -->
+            <div x-show="tab==='seances'" x-cloak class="space-y-4">
+                <div class="p-4 bg-gray-50 rounded-lg border border-green-200">
+                    <h3 class="font-semibold text-green-800 mb-1">Rapports Séances et Présences</h3>
+                    <p class="text-sm text-gray-700">Détails des séances: profs, remplacements, reports, statuts.</p>
+                </div>
+                <div class="p-4 bg-white rounded-lg border">
+                    <h4 class="font-semibold text-gray-800 mb-2">Séances par groupe</h4>
+                    <p class="text-sm text-gray-600 mb-3">Sélectionnez un groupe puis générez le rapport.</p>
+                    <form method="get" action="" class="flex gap-3">
+                        <select id="cohort-sessions-select" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none">
+                            <option value="">-- Sélectionnez un groupe --</option>
+                            {% for cohort in cohorts %}
+                            <option value="{% url 'reports:cohort_sessions' cohort.id %}">{{ cohort.name }} - {{ cohort.subject.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <button type="button" data-window-open-select="#cohort-sessions-select" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition shadow-sm">Générer</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Tab: Paiements -->
+            <div x-show="tab==='paiements'" x-cloak class="space-y-4">
+                <div class="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                    <h3 class="font-semibold text-yellow-800 mb-1">Rapports Paiements</h3>
+                    <p class="text-sm text-gray-700">Paiements étudiants mensuels et paie des professeurs.</p>
+                </div>
+                <div class="p-4 bg-white rounded-lg border">
+                    <h4 class="font-semibold text-gray-800 mb-2">Paiements étudiants mensuels</h4>
+                    <p class="text-sm text-gray-600 mb-3">Rapport des paiements reçus par mois.</p>
+                    <form method="get" action="{% url 'reports:payments_monthly' %}" target="_blank" class="flex gap-3">
+                        <select name="month" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 outline-none">
+                            <option value="1">Janvier</option>
+                            <option value="2">Février</option>
+                            <option value="3">Mars</option>
+                            <option value="4">Avril</option>
+                            <option value="5">Mai</option>
+                            <option value="6">Juin</option>
+                            <option value="7">Juillet</option>
+                            <option value="8">Août</option>
+                            <option value="9">Septembre</option>
+                            <option value="10">Octobre</option>
+                            <option value="11">Novembre</option>
+                            <option value="12" selected>Décembre</option>
+                        </select>
+                        <input type="number" name="year" value="2025" min="2020" max="2030" class="w-32 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 outline-none">
+                        <button type="submit" class="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg font-medium transition shadow-sm">Générer</button>
+                    </form>
+                </div>
+                <div class="p-4 bg-white rounded-lg border">
+                    <h4 class="font-semibold text-gray-800 mb-2">Paie des professeurs</h4>
+                    <p class="text-sm text-gray-600 mb-3">Heures et montants dus (filtre période optionnel).</p>
+                    <form method="get" action="{% url 'reports:teacher_payroll' %}" target="_blank" class="flex gap-3 flex-wrap">
+                        <div class="flex gap-3 flex-1">
+                            <input type="date" name="start" placeholder="Date début (optionnel)" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 outline-none">
+                            <input type="date" name="end" placeholder="Date fin (optionnel)" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 outline-none">
+                        </div>
+                        <button type="submit" class="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg font-medium transition shadow-sm">Générer</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

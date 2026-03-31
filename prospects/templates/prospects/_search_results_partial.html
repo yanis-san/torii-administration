@@ -1,0 +1,42 @@
+{% for p in prospects %}
+<tr class="border-t">
+  <td class="px-4 py-2">
+    <div class="font-medium">{{ p.first_name }} {{ p.last_name }}</div>
+  </td>
+  <td class="px-4 py-2 text-sm text-slate-600">
+    {% if p.email %}{{ p.email }}{% endif %}{% if p.phone %}{% if p.email %} • {% endif %}{{ p.phone }}{% endif %}
+  </td>
+  <td class="px-4 py-2 text-sm">{{ p.level|default:'—' }}</td>
+  <td class="px-4 py-2 text-sm">{{ p.activity_type|default:'—' }}</td>
+  <td class="px-4 py-2 text-sm">{{ p.source|default:'—' }}</td>
+  <td class="px-4 py-2">
+    {% if p.converted %}
+      <span class="badge badge-green">Converti</span>
+    {% else %}
+      <span class="badge badge-amber">À convertir</span>
+    {% endif %}
+  </td>
+  <td class="px-4 py-2 text-sm text-slate-600">{{ p.created_at|date:'d/m/Y H:i' }}</td>
+  <td class="px-4 py-2">
+    <div class="flex items-center gap-1 flex-nowrap">
+      {% if not p.converted %}
+        <button type="button" class="px-3 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 whitespace-nowrap" data-prospect-action="convert" data-prospect-id="{{ p.id }}">Convertir</button>
+      {% else %}
+        <button type="button" class="px-3 py-1 bg-orange-600 text-white rounded text-xs hover:bg-orange-700 whitespace-nowrap" data-prospect-action="cancel" data-prospect-id="{{ p.id }}">Annuler</button>
+      {% endif %}
+      <button hx-get="{% url 'prospects:edit_prospect' p.id %}" hx-target="body" hx-swap="beforeend"
+              class="px-2 py-1 bg-amber-500 text-white rounded text-xs hover:bg-amber-600" title="Modifier">
+        ✏️
+      </button>
+      <button type="button" data-prospect-action="delete" data-prospect-id="{{ p.id }}"
+              class="px-2 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600" title="Supprimer">
+        🗑️
+      </button>
+    </div>
+  </td>
+</tr>
+{% empty %}
+<tr>
+  <td colspan="8" class="px-4 py-6 text-center text-slate-500">Aucun prospect trouvé.</td>
+</tr>
+{% endfor %}

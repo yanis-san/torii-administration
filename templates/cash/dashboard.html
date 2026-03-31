@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% load custom_filters %}
+
+{% block title %}Gestion de Caisse{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-bold text-gray-800">💰 Gestion de Caisse</h1>
+        <a href="{% url 'cash:create_category' %}" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition">
+            + Nouvelle Catégorie
+        </a>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
+        <h2 class="text-xl font-bold text-gray-700 mb-2">Total Général</h2>
+        <p class="text-4xl font-bold text-indigo-600">{{ total_cash|format_da }} DA</p>
+        <p class="text-sm text-gray-500 mt-1">Somme de toutes les catégories</p>
+    </div>
+
+    {% if categories %}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for category in categories %}
+        <a href="{% url 'cash:category_detail' category.id %}" class="group {% if category.is_total %}bg-gradient-to-br from-amber-100 to-yellow-100 border-amber-400 hover:border-amber-500{% else %}bg-gradient-to-br from-indigo-50 to-purple-50 border-indigo-100 hover:border-indigo-300{% endif %} rounded-xl shadow-sm border-2 overflow-hidden hover:shadow-xl hover:scale-105 transition-all duration-200 block">
+            <div class="p-6">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="text-lg font-bold {% if category.is_total %}text-amber-900{% else %}text-gray-800{% endif %} group-hover:{% if category.is_total %}text-amber-700{% else %}text-indigo-700{% endif %} transition">{{ category.name }}</h3>
+                    {% if category.is_total %}
+                    <span class="text-xs font-bold bg-amber-500 text-white px-2 py-1 rounded">AUTO</span>
+                    {% endif %}
+                </div>
+                {% if category.description %}
+                <p class="text-sm text-gray-600 mb-4">{{ category.description }}</p>
+                {% endif %}
+                
+                <div class="mb-4">
+                    <p class="text-3xl font-bold {% if category.is_total %}text-amber-600{% else %}text-indigo-600{% endif %} group-hover:{% if category.is_total %}text-amber-700{% else %}text-indigo-700{% endif %} transition">{{ category.current_amount|format_da }} DA</p>
+                    {% if category.last_reset %}
+                    <p class="text-xs text-gray-400 mt-1">Dernier reset : {{ category.last_reset|date:"d/m/Y à H:i" }}</p>
+                    {% endif %}
+                </div>
+
+                {% if not category.is_total %}
+                <div class="flex gap-2" x-on:click.stop>
+                    <form method="post" action="{% url 'cash:reset_category' category.id %}" 
+                          data-confirm="Remettre cette catégorie à 0 DA ?" class="flex-1">
+                        {% csrf_token %}
+                        <button type="submit" class="w-full bg-amber-500 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-amber-600 shadow-sm hover:shadow-md transition-all">
+                            Reset à 0
+                        </button>
+                    </form>
+                </div>
+                {% else %}
+                <div class="text-center text-amber-700 text-xs font-medium">
+                    🔄 Calculé automatiquement
+                </div>
+                {% endif %}
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
+        <p class="text-gray-400 text-lg mb-4">Aucune catégorie de caisse</p>
+        <a href="{% url 'cash:create_category' %}" class="inline-block bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg font-medium transition">
+            Créer la première catégorie
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

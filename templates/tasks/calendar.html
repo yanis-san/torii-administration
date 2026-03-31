@@ -1,0 +1,195 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Calendrier des Tâches{% endblock %}
+
+{% block content %}
+<div class="px-4 sm:px-6 lg:px-8 py-8">
+    
+    <!-- En-tête -->
+    <div class="mb-8 flex items-center justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">📅 Calendrier des Tâches</h1>
+            <p class="text-gray-600 mt-1">Vue mensuelle de vos tâches et deadlines</p>
+        </div>
+        <a href="{% url 'tasks:list' %}" 
+           class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg font-semibold shadow-sm transition">
+            📋 Vue Liste
+        </a>
+    </div>
+
+    <!-- Statistiques rapides -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <div class="flex items-center gap-3">
+                <div class="bg-blue-100 p-3 rounded-lg">
+                    <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                    </svg>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-600">Tâches actives</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ total_tasks }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <div class="flex items-center gap-3">
+                <div class="bg-red-100 p-3 rounded-lg">
+                    <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                    </svg>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-600">Urgentes</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ urgent_tasks }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <div class="flex items-center gap-3">
+                <div class="bg-green-100 p-3 rounded-lg">
+                    <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-600">Aujourd'hui</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ today_tasks }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation du calendrier -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+        <div class="flex items-center justify-between mb-6">
+            <a href="?year={{ prev_year }}&month={{ prev_month }}" 
+               class="flex items-center gap-2 text-indigo-600 hover:text-indigo-700 font-medium">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+                Mois précédent
+            </a>
+            
+            <h2 class="text-2xl font-bold text-gray-900">
+                {{ month_name }} {{ year }}
+            </h2>
+            
+            <a href="?year={{ next_year }}&month={{ next_month }}" 
+               class="flex items-center gap-2 text-indigo-600 hover:text-indigo-700 font-medium">
+                Mois suivant
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+            </a>
+        </div>
+
+        <!-- Calendrier -->
+        <div class="grid grid-cols-7 gap-2">
+            <!-- En-têtes des jours -->
+            <div class="text-center font-semibold text-gray-700 py-2 bg-gray-50 rounded">Lun</div>
+            <div class="text-center font-semibold text-gray-700 py-2 bg-gray-50 rounded">Mar</div>
+            <div class="text-center font-semibold text-gray-700 py-2 bg-gray-50 rounded">Mer</div>
+            <div class="text-center font-semibold text-gray-700 py-2 bg-gray-50 rounded">Jeu</div>
+            <div class="text-center font-semibold text-gray-700 py-2 bg-gray-50 rounded">Ven</div>
+            <div class="text-center font-semibold text-gray-700 py-2 bg-gray-50 rounded">Sam</div>
+            <div class="text-center font-semibold text-gray-700 py-2 bg-gray-50 rounded">Dim</div>
+
+            <!-- Jours du mois -->
+            {% for week in calendar_weeks %}
+                {% for day_data in week %}
+                    {% if day_data.day == 0 %}
+                        <!-- Jour vide (mois précédent/suivant) -->
+                        <div class="min-h-24 bg-gray-50 rounded"></div>
+                    {% else %}
+                        <!-- Jour du mois -->
+                        <a href="{% url 'tasks:day_detail' year month day_data.day %}"
+                           class="min-h-24 border border-gray-200 rounded p-2 hover:bg-gray-50 transition block {% if day_data.is_today %}bg-blue-50 border-blue-300 border-2{% endif %}">
+                            <div class="font-semibold text-gray-900 mb-1 {% if day_data.is_today %}text-blue-600{% endif %}">
+                                {{ day_data.day }}
+                            </div>
+                            
+                            <!-- Tâches du jour -->
+                            {% if day_data.tasks %}
+                                <div class="space-y-1">
+                                    {% for item in day_data.tasks %}
+                                        {% with task=item.task %}
+                                        <div class="text-xs p-1 rounded cursor-pointer {% if task.priority == 'URGENT' %}bg-red-100 text-red-800 border border-red-300{% elif task.priority == 'HIGH' %}bg-orange-100 text-orange-800 border border-orange-300{% elif task.priority == 'MEDIUM' %}bg-yellow-100 text-yellow-800 border border-yellow-300{% else %}bg-gray-100 text-gray-800 border border-gray-300{% endif %} {% if task.is_completed %}opacity-50 line-through{% endif %}"
+                                             title="{{ task.title }} - {{ task.get_related_person_display|default:'Aucune personne' }}">
+                                            {% if item.type == 'scheduled' %}
+                                                📅
+                                            {% elif item.type == 'deadline' %}
+                                                ⏰
+                                            {% else %}
+                                                ➕
+                                            {% endif %}
+                                            {{ task.title|truncatewords:2 }}
+                                        </div>
+                                        {% endwith %}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </a>
+                    {% endif %}
+                {% endfor %}
+            {% endfor %}
+        </div>
+
+        <!-- Légende -->
+        <div class="mt-6 pt-6 border-t border-gray-200">
+            <p class="text-sm font-semibold text-gray-700 mb-3">Légende :</p>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                <div class="flex items-center gap-2">
+                    <div class="w-4 h-4 bg-red-100 border border-red-300 rounded"></div>
+                    <span>🔥 Urgente</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="w-4 h-4 bg-orange-100 border border-orange-300 rounded"></div>
+                    <span>⚠️ Haute</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="w-4 h-4 bg-yellow-100 border border-yellow-300 rounded"></div>
+                    <span>📌 Moyenne</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="w-4 h-4 bg-gray-100 border border-gray-300 rounded"></div>
+                    <span>📎 Basse</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-4 mt-3 text-sm">
+                <div class="flex items-center gap-2">
+                    <span>�</span>
+                    <span>= Date planifiée</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span>⏰</span>
+                    <span>= Date limite (Deadline)</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span>➕</span>
+                    <span>= Date de création</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="w-4 h-4 bg-blue-50 border-2 border-blue-300 rounded"></div>
+                    <span>= Aujourd'hui</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bouton pour créer une tâche -->
+    <div class="text-center">
+        <a href="{% url 'tasks:create' %}" 
+           class="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-8 py-4 rounded-lg font-bold shadow-lg transition">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+            </svg>
+            Créer une nouvelle tâche
+        </a>
+    </div>
+</div>
+
+{% endblock %}

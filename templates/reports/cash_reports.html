@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="p-4" x-data="{ tab: 'categories' }">
+  <h1 class="text-2xl font-semibold mb-4">Rapports de Caisse</h1>
+
+  <!-- Filtres période -->
+  <form method="get" class="flex items-end gap-2 mb-4">
+    <div>
+      <label class="block text-sm">Catégorie</label>
+      <select name="category" class="border rounded px-2 py-1 min-w-48">
+        <option value="">Toutes</option>
+        {% for c in categories %}
+        <option value="{{ c.id }}" {% if selected_category_id == c.id %}selected{% endif %}>{{ c.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="block text-sm">Début</label>
+      <input type="date" name="start" value="{{ start }}" class="border rounded px-2 py-1">
+    </div>
+    <div>
+      <label class="block text-sm">Fin</label>
+      <input type="date" name="end" value="{{ end }}" class="border rounded px-2 py-1">
+    </div>
+    <button class="bg-blue-600 text-white px-3 py-2 rounded">Filtrer</button>
+    <a href="{% url 'reports:cash_page' %}" class="px-3 py-2 border rounded">Réinitialiser</a>
+  </form>
+
+  <!-- Actions export -->
+  <div class="flex gap-2 mb-4">
+    <a href="{% url 'reports:cash_export_pdf' %}?start={{ start }}&end={{ end }}&category={{ selected_category_id }}" class="bg-emerald-600 text-white px-3 py-2 rounded">Exporter PDF</a>
+    <a href="{% url 'reports:cash_export_csv' %}?start={{ start }}&end={{ end }}&category={{ selected_category_id }}" class="bg-amber-600 text-white px-3 py-2 rounded">Exporter Excel (CSV)</a>
+  </div>
+
+  <!-- Onglets Alpine.js -->
+  <div class="border-b mb-3 flex gap-4">
+    <button :class="tab==='categories' ? 'border-b-2 border-blue-600 font-semibold' : ''" @click="tab='categories'">Catégories</button>
+    <button :class="tab==='transactions' ? 'border-b-2 border-blue-600 font-semibold' : ''" @click="tab='transactions'">Transactions</button>
+    <button :class="tab==='synthese' ? 'border-b-2 border-blue-600 font-semibold' : ''" @click="tab='synthese'">Synthèse</button>
+  </div>
+
+  <!-- Catégories -->
+  <div x-show="tab==='categories'">
+    <div class="text-sm text-gray-700 mb-2">Total hors TOTAL: <span class="font-semibold">{{ total_cash }} DA</span></div>
+    <div class="overflow-x-auto">
+      <table class="min-w-full border">
+        <thead>
+          <tr class="bg-gray-100">
+            <th class="p-2 border">Catégorie</th>
+            <th class="p-2 border">Montant actuel</th>
+            <th class="p-2 border">Dernier reset</th>
+            <th class="p-2 border">TOTAL?</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for cat in categories %}
+          <tr>
+            <td class="p-2 border">{{ cat.name }}</td>
+            <td class="p-2 border">{{ cat.current_amount }} DA</td>
+            <td class="p-2 border">{% if cat.last_reset %}{{ cat.last_reset|date:'d/m/Y H:i' }}{% else %}-{% endif %}</td>
+            <td class="p-2 border">{% if cat.is_total %}Oui{% else %}Non{% endif %}</td>
+          </tr>
+          {% empty %}
+          <tr><td class="p-2" colspan="4">Aucune catégorie</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Transactions -->
+  <div x-show="tab==='transactions'">
+    <div class="overflow-x-auto">
+      <table class="min-w-full border">
+        <thead>
+          <tr class="bg-gray-100">
+            <th class="p-2 border">Date</th>
+            <th class="p-2 border">Catégorie</th>
+            <th class="p-2 border">Type</th>
+            <th class="p-2 border">Montant</th>
+            <th class="p-2 border">Avant</th>
+            <th class="p-2 border">Après</th>
+            <th class="p-2 border">Note</th>
+            <th class="p-2 border">Par</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for tx in transactions %}
+          <tr>
+            <td class="p-2 border">{{ tx.created_at|date:'d/m/Y H:i' }}</td>
+            <td class="p-2 border">{{ tx.category.name }}</td>
+            <td class="p-2 border">{{ tx.get_transaction_type_display }}</td>
+            <td class="p-2 border">{{ tx.amount }} DA</td>
+            <td class="p-2 border">{{ tx.amount_before }} DA</td>
+            <td class="p-2 border">{{ tx.amount_after }} DA</td>
+            <td class="p-2 border">{{ tx.note }}</td>
+            <td class="p-2 border">{% if tx.created_by %}{{ tx.created_by.get_full_name }}{% else %}Système{% endif %}</td>
+          </tr>
+          {% empty %}
+          <tr><td class="p-2" colspan="8">Aucune transaction dans la période choisie</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Synthèse -->
+  <div x-show="tab==='synthese'">
+    <div class="space-y-2">
+      <div class="text-gray-700">Ce rapport regroupe les catégories et un extrait des transactions filtrées.
+        Exportez en PDF ou CSV pour partager.</div>
+      <ul class="list-disc ml-5 text-gray-700">
+        <li>PDF: tableau des catégories + transactions filtrées</li>
+        <li>CSV (Excel): catégories puis transactions, compatible Excel</li>
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

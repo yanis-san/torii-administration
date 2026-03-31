@@ -1,0 +1,135 @@
+<!-- Carte de tâche individuelle -->
+<div class="bg-white rounded-lg shadow-md hover:shadow-lg transition p-4 border-l-4
+            {% if task.priority == 'URGENT' %}
+            border-red-500
+            {% elif task.priority == 'HIGH' %}
+            border-orange-500
+            {% elif task.priority == 'MEDIUM' %}
+            border-yellow-500
+            {% else %}
+            border-gray-300
+            {% endif %}
+            {% if task.is_completed %}
+            opacity-60
+            {% endif %}"
+     id="task-{{ task.id }}">
+    
+    <div class="flex items-start justify-between gap-4">
+        <!-- Contenu principal -->
+        <div class="flex-1 min-w-0">
+            <!-- Titre et checkbox -->
+            <div class="flex items-start gap-3 mb-2">
+                <input type="checkbox" 
+                       {% if task.is_completed %}checked{% endif %}
+                       hx-post="{% url 'tasks:toggle_complete' task.id %}"
+                       hx-target="#task-{{ task.id }}"
+                       hx-swap="outerHTML"
+                       class="mt-1 w-5 h-5 text-green-600 rounded focus:ring-green-500 cursor-pointer">
+                
+                <div class="flex-1">
+                    <h3 class="font-semibold text-lg text-gray-900 {% if task.is_completed %}line-through{% endif %}">
+                        {{ task.title }}
+                    </h3>
+                    
+                    {% if task.description %}
+                    <p class="text-gray-600 text-sm mt-1 {% if task.is_completed %}line-through{% endif %}">
+                        {{ task.description|truncatewords:20 }}
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Badges et informations -->
+            <div class="flex flex-wrap gap-2 mt-3">
+                <!-- Badge de priorité -->
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                            {% if task.priority == 'URGENT' %}
+                            bg-red-100 text-red-800
+                            {% elif task.priority == 'HIGH' %}
+                            bg-orange-100 text-orange-800
+                            {% elif task.priority == 'MEDIUM' %}
+                            bg-yellow-100 text-yellow-800
+                            {% else %}
+                            bg-gray-100 text-gray-800
+                            {% endif %}">
+                    {{ task.get_priority_display }}
+                </span>
+
+                <!-- Badge de catégorie -->
+                {% if task.category %}
+                    <span class="task-category-chip inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                        data-category-color="{{ task.category.color }}"
+                        data-category-bg-alpha="0.13"
+                        data-category-border-alpha="1">
+                    🏷️ {{ task.category.name }}
+                </span>
+                {% endif %}
+
+                <!-- Badge personne -->
+                {% if task.get_related_person_display %}
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    👤 {{ task.get_related_person_display }}
+                </span>
+                {% endif %}
+
+                <!-- Badge téléphone -->
+                {% if task.get_related_person_phone %}
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    📞 {{ task.get_related_person_phone }}
+                </span>
+                {% endif %}
+            </div>
+
+            <!-- Dates -->
+            <div class="mt-3 space-y-1 text-sm text-gray-600">
+                {% if show_scheduled and task.scheduled_date %}
+                <div class="flex items-center gap-2">
+                    <span>📅</span>
+                    <span>Planifiée: {{ task.scheduled_date|date:"d/m/Y" }}</span>
+                </div>
+                {% endif %}
+
+                {% if show_deadline and task.deadline %}
+                <div class="flex items-center gap-2">
+                    <span>⏰</span>
+                    <span>Deadline: {{ task.deadline|date:"d/m/Y" }}</span>
+                </div>
+                {% endif %}
+
+                {% if show_created %}
+                <div class="flex items-center gap-2">
+                    <span>➕</span>
+                    <span>Créée le: {{ task.created_at|date:"d/m/Y à H:i" }}</span>
+                </div>
+                {% endif %}
+
+                {% if task.is_completed and task.completed_at %}
+                <div class="flex items-center gap-2 text-green-600">
+                    <span>✅</span>
+                    <span>Complétée le: {{ task.completed_at|date:"d/m/Y à H:i" }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex flex-col gap-2">
+            <a href="{% url 'tasks:edit' task.id %}"
+               class="text-blue-600 hover:text-blue-800 transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                </svg>
+            </a>
+            
+            <button hx-delete="{% url 'tasks:delete' task.id %}"
+                    hx-target="#task-{{ task.id }}"
+                    hx-swap="outerHTML"
+                    hx-confirm="Êtes-vous sûr de vouloir supprimer cette tâche ?"
+                    class="text-red-600 hover:text-red-800 transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+</div>

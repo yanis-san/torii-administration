@@ -1,0 +1,37 @@
+<!-- Template initial de démarrage de la sauvegarde -->
+<div hx-target="this" hx-swap="outerHTML" class="fixed bottom-4 right-4 bg-white rounded-lg shadow-xl p-6 w-96 z-50">
+    <h3 class="text-lg font-semibold text-gray-900 mb-4">💾 Sauvegarde</h3>
+    
+    <div 
+        hx-trigger="done" 
+        hx-get="{% url 'backup_result' %}" 
+        hx-swap="outerHTML" 
+        hx-target="this">
+        
+        <h3 role="status" id="pblabel" tabindex="-1" autofocus class="text-sm font-medium text-blue-600 mb-3">
+            ⏳ Sauvegarde en cours...
+        </h3>
+        
+        <div
+            hx-get="{% url 'backup_progress' %}"
+            hx-trigger="every 500ms"
+            hx-target="this"
+            hx-swap="innerHTML">
+            
+            <!-- Barre de progression -->
+            <div class="backup-progress-track bg-gray-200 rounded-full h-2 overflow-hidden mb-3"
+                 role="progressbar" 
+                 aria-valuemin="0" 
+                 aria-valuemax="100" 
+                 aria-valuenow="0" 
+                 aria-labelledby="pblabel">
+                <div id="pb" class="backup-progress-bar bg-blue-600 h-full" data-progress-width="0">
+                </div>
+            </div>
+            
+            <!-- Message -->
+            <p class="text-xs text-gray-600">Initialisation...</p>
+        </div>
+    </div>
+</div>
+

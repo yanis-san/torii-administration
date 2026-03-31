@@ -1,0 +1,40 @@
+🛒 {{ shopping_list.title }}
+=====================================================
+
+{% if shopping_list.event_date %}
+📅 Date d'événement: {{ shopping_list.event_date|date:"d/m/Y" }}
+{% endif %}
+
+{% if shopping_list.description %}
+📝 Description:
+{{ shopping_list.description }}
+
+{% endif %}
+
+ARTICLES ({{ items.count }}):
+-----------------------------------------------------
+
+{% for item in items %}
+{{ forloop.counter }}. {% if item.is_purchased %}✅{% else %}⬜{% endif %} {{ item.get_item_name }}
+   Quantité: {{ item.quantity_needed }} {{ item.unit }}
+   {% if item.unit_price %}Prix unitaire: €{{ item.unit_price|floatformat:2 }}
+   Total: €{{ item.get_total_price|floatformat:2 }}
+   {% endif %}
+   Priorité: {{ item.get_priority_display }}
+   {% if item.supplier %}Fournisseur: {{ item.supplier }}
+   {% endif %}
+   {% if item.notes %}Notes: {{ item.notes }}
+   {% endif %}
+
+{% endfor %}
+
+RÉSUMÉ:
+-----------------------------------------------------
+Total articles: {{ items.count }}
+Achetés: {{ purchased_count }}
+Restants: {{ items.count|add:"-"|add:purchased_count }}
+Coût total: €{{ shopping_list.total_cost|floatformat:2 }}
+Statut: {{ shopping_list.get_status_display }}
+
+-----------------------------------------------------
+Email généré par le système de gestion d'inventaire

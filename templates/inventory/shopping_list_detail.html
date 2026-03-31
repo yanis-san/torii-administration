@@ -1,0 +1,225 @@
+{% extends 'base.html' %}
+{% load inventory_filters %}
+
+{% block title %}{{ shopping_list.title }}{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50" x-data="{
+    toggleUrlTemplate: '{% url "inventory:toggle_purchased" 0 %}',
+    csrfToken: '{{ csrf_token }}',
+    async togglePurchased(itemId, event) {
+        if (!itemId || !this.toggleUrlTemplate) {
+            return;
+        }
+        const checkbox = event.target;
+        const url = this.toggleUrlTemplate.replace('0', itemId);
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': this.csrfToken,
+                    'Content-Type': 'application/json'
+                }
+            });
+            const data = await response.json();
+            if (data.success) {
+                window.location.reload();
+                return;
+            }
+            checkbox.checked = !checkbox.checked;
+        } catch (_error) {
+            checkbox.checked = !checkbox.checked;
+        }
+    }
+}">
+    <div class="max-w-4xl mx-auto py-6 sm:px-6 lg:px-8">
+        <!-- En-tête -->
+        <div class="mb-8">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900">🛒 {{ shopping_list.title }}</h1>
+                    <p class="text-gray-600 mt-2">Gérer vos achats</p>
+                </div>
+                <div class="space-x-2">
+                    <a href="{% url 'inventory:shopping_list_pdf' shopping_list.id %}" 
+                       class="inline-block bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition">
+                        📄 Télécharger PDF
+                    </a>
+                    <a href="{% url 'admin:inventory_shoppinglist_change' shopping_list.id %}" 
+                       class="inline-block bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition">
+                        ✎ Éditer
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Infos -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                <div>
+                    <p class="text-sm text-gray-600">Créée par</p>
+                    <p class="font-bold text-gray-900">{{ shopping_list.created_by.get_full_name }}</p>
+                </div>
+                {% if shopping_list.event_date %}
+                <div>
+                    <p class="text-sm text-gray-600">Date d'événement</p>
+                    <p class="font-bold text-gray-900">{{ shopping_list.event_date|date:"d/m/Y" }}</p>
+                </div>
+                {% endif %}
+                <div>
+                    <p class="text-sm text-gray-600">Statut</p>
+                    <p class="font-bold">
+                        <span class="px-2 py-1 rounded-full text-xs font-bold
+                        {% if shopping_list.status == 'completed' %}bg-green-100 text-green-800
+                        {% elif shopping_list.status == 'in_progress' %}bg-blue-100 text-blue-800
+                        {% else %}bg-gray-100 text-gray-800{% endif %}">
+                            {% if shopping_list.status == 'completed' %}✅ Complété
+                            {% elif shopping_list.status == 'in_progress' %}🔄 En cours
+                            {% else %}📄 Brouillon{% endif %}
+                        </span>
+                    </p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-600">Coût total</p>
+                    <p class="font-bold text-green-600 text-lg">€{{ shopping_list.total_cost|floatformat:2 }}</p>
+                </div>
+            </div>
+
+            {% if shopping_list.description %}
+            <div class="border-t pt-4">
+                <p class="text-sm text-gray-600 mb-2">Description</p>
+                <p class="text-gray-800">{{ shopping_list.description }}</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Barre de progression -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="font-bold text-gray-900">Progression</h3>
+                <span class="text-sm font-bold text-gray-600">{{ total_purchased }}/{{ total_items }} achetés</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
+                <div class="progress-fill bg-green-500 h-full rounded-full transition-all" :style="'width: {{ progress_percentage }}%'" data-progress="{{ progress_percentage }}"></div>
+            </div>
+        </div>
+
+        <!-- Articles -->
+        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+            <div class="px-6 py-4 bg-gray-100 border-b border-gray-200">
+                <h2 class="text-lg font-bold text-gray-900">Articles ({{ items.count }})</h2>
+            </div>
+
+            {% if items %}
+                <div class="divide-y divide-gray-200">
+                    {% for item in items %}
+                    <div class="p-6 hover:bg-gray-50 transition flex items-start justify-between">
+                        <!-- Checkbox et infos -->
+                        <div class="flex items-start gap-4 flex-1">
+                            <input type="checkbox" 
+                                   class="mt-1 toggle-purchased" 
+                                   data-item-id="{{ item.id }}"
+                                @change="togglePurchased('{{ item.id }}', $event)"
+                                {% if item.is_purchased %}checked{% endif %}>
+                            
+                            <div class="flex-1">
+                                <h3 class="font-bold text-gray-900 {% if item.is_purchased %}line-through text-gray-500{% endif %}">
+                                    {{ item.get_item_name }}
+                                </h3>
+                                
+                                <div class="mt-2 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-600">
+                                    <div>
+                                        <span class="text-xs text-gray-500">Quantité</span>
+                                        <p class="font-semibold">{{ item.quantity_needed }} {{ item.unit }}</p>
+                                    </div>
+                                    
+                                    {% if item.unit_price %}
+                                    <div>
+                                        <span class="text-xs text-gray-500">Prix unitaire</span>
+                                        <p class="font-semibold">€{{ item.unit_price|floatformat:2 }}</p>
+                                    </div>
+                                    
+                                    <div>
+                                        <span class="text-xs text-gray-500">Total</span>
+                                        <p class="font-semibold text-green-600">€{{ item.get_total_price|floatformat:2 }}</p>
+                                    </div>
+                                    {% endif %}
+                                    
+                                    <div>
+                                        <span class="text-xs text-gray-500">Priorité</span>
+                                        <p class="font-semibold">
+                                            <span class="inline-block px-2 py-1 rounded text-xs bg-blue-100 text-blue-800">
+                                                {{ item.get_priority_display }}
+                                            </span>
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {% if item.supplier or item.notes %}
+                                <div class="mt-2 text-xs text-gray-600 space-y-1">
+                                    {% if item.supplier %}
+                                    <p><span class="font-semibold">Fournisseur:</span> {{ item.supplier }}</p>
+                                    {% endif %}
+                                    {% if item.notes %}
+                                    <p><span class="font-semibold">Notes:</span> {{ item.notes }}</p>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+
+                                {% if item.is_purchased and item.purchase_date %}
+                                <div class="mt-2 text-xs text-green-600 font-semibold">
+                                    ✅ Acheté le {{ item.purchase_date|date:"d/m/Y" }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Actions -->
+                        <div class="ml-4 flex flex-col gap-2">
+                            <span class="px-3 py-1 rounded-full text-xs font-bold text-center
+                            {% if item.is_purchased %}bg-green-100 text-green-800{% else %}bg-yellow-100 text-yellow-800{% endif %}">
+                                {% if item.is_purchased %}✅ Acheté{% else %}🕐 À acheter{% endif %}
+                            </span>
+                            <a href="{% url 'admin:inventory_shoppinglistitem_change' item.id %}" 
+                               class="text-blue-600 hover:text-blue-800 text-xs font-medium">
+                                ✎ Modifier
+                            </a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="p-8 text-center">
+                    <p class="text-gray-600 mb-4">Aucun article dans cette liste</p>
+                    <a href="{% url 'admin:inventory_shoppinglistitem_add' %}" class="text-blue-600 hover:text-blue-800 font-medium">
+                        ➕ Ajouter un article
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Résumé -->
+        <div class="mt-8 bg-blue-50 border-l-4 border-blue-500 p-6 rounded">
+            <h3 class="font-bold text-gray-900 mb-3">📊 Résumé</h3>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                <div>
+                    <p class="text-gray-600">Total articles</p>
+                    <p class="text-2xl font-bold text-blue-600">{{ total_items }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-600">Achetés</p>
+                    <p class="text-2xl font-bold text-green-600">{{ total_purchased }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-600">Restants</p>
+                    <p class="text-2xl font-bold text-yellow-600">{{ remaining_items }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-600">Coût total</p>
+                    <p class="text-2xl font-bold text-green-600">€{{ shopping_list.total_cost|floatformat:2 }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

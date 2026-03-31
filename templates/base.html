@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Institut Torii</title>
+
+    {% load static tailwind_tags %}
+    {% tailwind_css %}
+    <script defer src="{% static 'js/htmx.min.js' %}"></script>
+    
+    <script defer src="{% static 'js/alpine-collapse.min.js' %}"></script>
+    <script defer src="{% static 'js/alpinejs.min.js' %}"></script>
+    <link rel="stylesheet" href="{% static 'css/base.css' %}">
+
+    {% block extra_css %}{% endblock %}
+</head>
+<body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}' class="bg-gray-100 font-sans text-gray-900" x-data="{ sidebarCollapsed: false, gestionOpen: true, financeOpen: true, adminOpen: true, mobileMenuOpen: false }" x-init="
+    (() => {
+        const ls = (k, d) => { const v = localStorage.getItem(k); return v === null ? d : (v === 'true'); };
+        sidebarCollapsed = ls('sidebarCollapsed', false);
+        gestionOpen = ls('gestionOpen', true);
+        financeOpen = ls('financeOpen', true);
+        adminOpen = true;
+    })()
+"
+      data-csrf-token="{{ csrf_token }}"
+      data-url-dashboard="{% url 'dashboard' %}"
+      data-url-students="{% url 'students:list' %}"
+      data-url-academics="{% url 'academics:list' %}"
+      data-url-prospects="{% url 'prospects:list' %}"
+      data-url-payment-status="{% url 'finance:payment_status_dashboard' %}"
+      data-url-teacher-payroll="{% url 'finance:teacher_cohort_payroll' %}"
+      data-url-cash-dashboard="{% url 'cash:dashboard' %}"
+      data-url-sync-page="{% url 'documents:sync_page' %}">
+
+    <div class="flex h-screen overflow-hidden">
+
+        <!-- Backdrop mobile -->
+        <div x-show="mobileMenuOpen" x-transition.opacity class="fixed inset-0 bg-black/40 z-30 lg:hidden" @click="mobileMenuOpen = false"></div>
+
+        <!-- Modern Sidebar -->
+        <aside :class="[
+                    sidebarCollapsed ? 'w-20' : 'w-72',
+                    mobileMenuOpen ? 'translate-x-0 flex' : '-translate-x-full',
+                    'lg:translate-x-0 lg:flex'
+                ]"
+               class="fixed lg:static inset-y-0 left-0 z-40 bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 text-white flex-col shadow-2xl sidebar-transition transform lg:transform-none">
+            
+            <!-- Toggle Button (desktop only) -->
+            <button @click="sidebarCollapsed = !sidebarCollapsed; localStorage.setItem('sidebarCollapsed', sidebarCollapsed)"
+                    class="hidden lg:inline-flex absolute left-2 top-4 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-1.5 shadow-lg z-50 sidebar-transition">
+                <svg :class="sidebarCollapsed ? 'rotate-180' : ''" class="w-4 h-4 sidebar-transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+            </button>
+
+            <!-- Logo -->
+            <div class="p-6 border-b border-slate-800/50 flex-shrink-0">
+                <div x-show="!sidebarCollapsed" x-transition class="w-full">
+                    <h1 class="text-2xl font-bold bg-gradient-to-r from-blue-400 to-blue-600 bg-clip-text text-transparent">Institut Torii</h1>
+                </div>
+                <div x-show="sidebarCollapsed" x-transition class="text-center">
+                    <span class="text-2xl">🏫</span>
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <nav class="flex-1 px-3 py-6 space-y-1 overflow-y-auto custom-scrollbar">
+                
+                <!-- Dashboard -->
+                     <a href="{% url 'dashboard' %}" 
+                         class="group flex items-center gap-3 px-4 py-3 rounded-xl {% if request.resolver_match.view_name == 'dashboard' %}bg-gradient-to-r from-blue-600 to-blue-500 shadow-lg shadow-blue-500/30{% else %}text-slate-300 hover:bg-slate-800/70{% endif %} sidebar-transition"
+                   x-tooltip="sidebarCollapsed ? 'Tableau de bord' : ''">
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                    </svg>
+                    <span x-show="!sidebarCollapsed" class="font-medium">Tableau de bord</span>
+                    <span x-show="!sidebarCollapsed" class="ml-auto text-[10px] bg-slate-700/50 px-2 py-0.5 rounded-md font-mono opacity-0 group-hover:opacity-100 sidebar-transition">Alt+²</span>
+                </a>
+
+                {% if request.user.is_teacher %}
+                    <!-- Teacher Menu -->
+                    <div class="mt-6 space-y-1">
+                        <a href="{% url 'academics:list' %}" class="group flex items-center gap-3 px-4 py-3 rounded-xl text-slate-300 hover:bg-slate-800/70 sidebar-transition">
+                            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+                            </svg>
+                            <span x-show="!sidebarCollapsed" class="font-medium">Mes Groupes</span>
+                        </a>
+                        <a href="{% url 'documents:select_cohort' %}" class="group flex items-center gap-3 px-4 py-3 rounded-xl text-slate-300 hover:bg-slate-800/70 sidebar-transition">
+                            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                            <span x-show="!sidebarCollapsed" class="font-medium">Mes Documents</span>
+                        </a>
+                    </div>
+
+                {% else %}
+                    <!-- Admin Menu -->
+                    
+                    <!-- Gestion Section -->
+                    <div class="mt-6">
+                        <button @click="gestionOpen = !gestionOpen; localStorage.setItem('gestionOpen', gestionOpen)" 
+                                class="w-full flex items-center gap-2 px-4 py-2 text-xs font-semibold text-slate-400 uppercase hover:text-slate-300 sidebar-transition">
+                            <svg :class="gestionOpen ? 'rotate-90' : ''" class="w-3 h-3 sidebar-transition" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+                            </svg>
+                            <span x-show="!sidebarCollapsed">Gestion</span>
+                        </button>
+                        
+                        <div x-show="gestionOpen" x-collapse class="space-y-1 mt-2">
+                            <a href="{% url 'students:list' %}" 
+                               class="group flex items-center gap-3 px-4 py-2.5 rounded-xl {% if request.resolver_match.view_name == 'students:list' %}bg-gradient-to-r from-blue-600 to-blue-500 shadow-lg shadow-blue-500/30{% else %}text-slate-300 hover:bg-slate-800/70{% endif %} sidebar-transition">
+                                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+                                </svg>
+                                <span x-show="!sidebarCollapsed" class="font-medium">Étudiants</span>
+                                <span x-show="!sidebarCollapsed" class="ml-auto text-[10px] bg-slate-700/50 px-2 py-0.5 rounded-md font-mono opacity-0 group-hover:opacity-100 sidebar-transition">Alt+&</span>
+                            </a>
+                            
+                            <a href="{% url 'academics:list' %}" 
+                               class="group flex items-center gap-3 px-4 py-2.5 rounded-xl {% if request.resolver_match.view_name == 'academics:list' %}bg-gradient-to-r from-blue-600 to-blue-500 shadow-lg shadow-blue-500/30{% else %}text-slate-300 hover:bg-slate-800/70{% endif %} sidebar-transition">
+                                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                </svg>
+                                <span x-show="!sidebarCollapsed" class="font-medium">Groupes & Classes</span>
+                                <span x-show="!sidebarCollapsed" class="ml-auto text-[10px] bg-slate-700/50 px-2 py-0.5 rounded-md font-mono opacity-0 group-hover:opacity-100 sidebar-transition">Alt+é</span>
+                            </a>
+                            
+                            <a href="{% url 'prospects:list' %}" 
+                               class="group flex items-center gap-3 px-4 py-2.5 rounded-xl {% if request.resolver_match.view_name == 'prospects:list' %}bg-gradient-to-r from-blue-600 to-blue-500 shadow-lg shadow-blue-500/30{% else %}text-slate-300 hover:bg-slate-800/70{% endif %} sidebar-transition">
+                                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                                </svg>
+                                <span x-show="!sidebarCollapsed" class="font-medium">Prospects</span>
+                                <span x-show="!sidebarCollapsed" class="ml-auto text-[10px] bg-slate-700/50 px-2 py-0.5 rounded-md font-mono opacity-0 group-hover:opacity-100 sidebar-transition">Alt+"</span>
+                            </a>
+
+                            <a href="{% url 'documents:teachers_list' %}" 
+                               class="group flex items-center gap-3 px-4 py-2.5 rounded-xl {% if request.resolver_match.view_name == 'teachers_list' %}bg-gradient-to-r from-blue-600 to-blue-500 shadow-lg shadow-blue-500/30{% else %}text-slate-300 hover:bg-slate-800/70{% endif %} sidebar-transition">
+                                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                                </svg>
+                                <span x-show="!sidebarCollapsed" class="font-medium">Profs</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Finance Section -->
+                    <div class="mt-4">
+                        <button @click="financeOpen = !financeOpen; localStorage.setItem('financeOpen', financeOpen)" 
+                                class="w-full flex items-center gap-2 px-4 py-2 text-xs font-semibold text-slate-400 uppercase hover:text-slate-300 sidebar-transition">
+                            <svg :class="financeOpen ? 'rotate-90' : ''" class="w-3 h-3 sidebar-transition" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+                            </svg>
+                            <span x-show="!sidebarCollapsed">Finances</span>
+                        </button>
+                        
+                        <div x-show="financeOpen" x-collapse class="space-y-1 mt-2">
+                            <a href="{% url 'finance:payment_status_dashboard' %}" 
+                               class="group flex items-center gap-3 px-4 py-2.5 rounded-xl {% if request.resolver_match.view_name == 'finance:payment_status_dashboard' %}bg-gradient-to-r from-blue-600 to-blue-500 shadow-lg shadow-blue-500/30{% else %}text-slate-300 hover:bg-slate-800/70{% endif %} sidebar-transition">
+                                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
+                                </svg>
+                                <span x-show="!sidebarCollapsed" class="font-medium">Suivi Paiements</span>
+                                <span x-show="!sidebarCollapsed" class="ml-auto text-[10px] bg-slate-700/50 px-2 py-0.5 rounded-md font-mono opacity-0 group-hover:opacity-100 sidebar-transition">Alt+'</span>
+                            </a>
+                            
+                            <a href="{% url 'finance:teacher_cohort_payroll' %}" 
+                               class="group flex items-center gap-3 px-4 py-2.5 rounded-xl {% if request.resolver_match.view_name == 'finance:teacher_cohort_payroll' %}bg-gradient-to-r from-blue-600 to-blue-500 shadow-lg shadow-blue-500/30{% else %}text-slate-300 hover:bg-slate-800/70{% endif %} sidebar-transition">
+                                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                <span x-show="!sidebarCollapsed" class="font-medium">Paie Professeurs</span>
+                                <span x-show="!sidebarCollapsed" class="ml-auto text-[10px] bg-slate-700/50 px-2 py-0.5 rounded-md font-mono opacity-0 group-hover:opacity-100 sidebar-transition">Alt+(</span>
+                            </a>
+                            
+                            <a href="{% url 'cash:dashboard' %}" 
+                               class="group flex items-center gap-3 px-4 py-2.5 rounded-xl {% if request.resolver_match.view_name == 'cash:dashboard' %}bg-gradient-to-r from-blue-600 to-blue-500 shadow-lg shadow-blue-500/30{% else %}text-slate-300 hover:bg-slate-800/70{% endif %} sidebar-transition">
+                                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
+                                </svg>
+                                <span x-show="!sidebarCollapsed" class="font-medium">Caisse</span>
+                                <span x-show="!sidebarCollapsed" class="ml-auto text-[10px] bg-slate-700/50 px-2 py-0.5 rounded-md font-mono opacity-0 group-hover:opacity-100 sidebar-transition">Alt+-</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Administration Section (always expanded) -->
+                    <div class="mt-4">
+                        <p class="px-4 py-2 text-xs font-semibold text-slate-400 uppercase">Administration</p>
+                        <div class="space-y-1 mt-1">
+                            <a href="{% url 'tasks:list' %}" class="group flex items-center gap-3 px-4 py-2.5 rounded-xl {% if request.resolver_match.url_name == 'list' and request.resolver_match.namespace == 'tasks' %}bg-gradient-to-r from-blue-600 to-blue-500 shadow-lg shadow-blue-500/30{% else %}text-slate-300 hover:bg-slate-800/70{% endif %} sidebar-transition">
+                                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+                                </svg>
+                                <span x-show="!sidebarCollapsed" class="font-medium">Tâches (Liste)</span>
+                            </a>
+                            
+                            <a href="{% url 'tasks:calendar' %}" class="group flex items-center gap-3 px-4 py-2.5 rounded-xl {% if request.resolver_match.url_name == 'calendar' and request.resolver_match.namespace == 'tasks' %}bg-gradient-to-r from-blue-600 to-blue-500 shadow-lg shadow-blue-500/30{% else %}text-slate-300 hover:bg-slate-800/70{% endif %} sidebar-transition">
+                                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                </svg>
+                                <span x-show="!sidebarCollapsed" class="font-medium">Calendrier Tâches</span>
+                            </a>
+                            
+                            <a href="{% url 'academic_year_list' %}" class="group flex items-center gap-3 px-4 py-2.5 rounded-xl {% if request.resolver_match.view_name == 'academic_year_list' %}bg-gradient-to-r from-blue-600 to-blue-500 shadow-lg shadow-blue-500/30{% else %}text-slate-300 hover:bg-slate-800/70{% endif %} sidebar-transition">
+                                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                                </svg>
+                                <span x-show="!sidebarCollapsed" class="font-medium">Années Scolaires</span>
+                            </a>
+                            
+                            <a href="{% url 'inventory:dashboard' %}" class="group flex items-center gap-3 px-4 py-2.5 rounded-xl {% if request.resolver_match.view_name == 'inventory:dashboard' %}bg-gradient-to-r from-blue-600 to-blue-500 shadow-lg shadow-blue-500/30{% else %}text-slate-300 hover:bg-slate-800/70{% endif %} sidebar-transition">
+                                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                                </svg>
+                                <span x-show="!sidebarCollapsed" class="font-medium">Inventaire</span>
+                            </a>
+                            
+                            <a href="{% url 'emails:dashboard' %}" class="group flex items-center gap-3 px-4 py-2.5 rounded-xl {% if request.resolver_match.view_name == 'emails:dashboard' %}bg-gradient-to-r from-blue-600 to-blue-500 shadow-lg shadow-blue-500/30{% else %}text-slate-300 hover:bg-slate-800/70{% endif %} sidebar-transition">
+                                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                                </svg>
+                                <span x-show="!sidebarCollapsed" class="font-medium">Emails</span>
+                            </a>
+                            
+                            <a href="{% url 'documents:select_cohort' %}" class="group flex items-center gap-3 px-4 py-2.5 rounded-xl {% if request.resolver_match.view_name == 'documents:select_cohort' %}bg-gradient-to-r from-blue-600 to-blue-500 shadow-lg shadow-blue-500/30{% else %}text-slate-300 hover:bg-slate-800/70{% endif %} sidebar-transition">
+                                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                </svg>
+                                <span x-show="!sidebarCollapsed" class="font-medium">Documents</span>
+                            </a>
+                            
+                            <a href="{% url 'reports:menu' %}" class="group flex items-center gap-3 px-4 py-2.5 rounded-xl {% if request.resolver_match.view_name == 'reports:menu' %}bg-gradient-to-r from-blue-600 to-blue-500 shadow-lg shadow-blue-500/30{% else %}text-slate-300 hover:bg-slate-800/70{% endif %} sidebar-transition">
+                                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                </svg>
+                                <span x-show="!sidebarCollapsed" class="font-medium">Rapports</span>
+                            </a>
+                            
+                            <button hx-post="{% url 'backup_start' %}" 
+                                    hx-target="body" 
+                                    hx-swap="beforeend" 
+                                    class="w-full group flex items-center gap-3 px-4 py-2.5 rounded-xl text-slate-300 hover:bg-slate-800/70 sidebar-transition hover:text-white transition">
+                                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-6 3h12a2 2 0 002-2v-6a2 2 0 00-2-2H3a2 2 0 00-2 2v6a2 2 0 002 2z"/>
+                                </svg>
+                                <span x-show="!sidebarCollapsed" class="font-medium">Sauvegarder</span>
+                                <span x-show="!sidebarCollapsed" class="ml-auto text-[10px] bg-slate-700/50 px-2 py-0.5 rounded-md font-mono opacity-0 group-hover:opacity-100 sidebar-transition">Ctrl+Alt+S</span>
+                            </button>
+                            
+                            {% if request.user.is_superuser %}
+                                <a href="/admin/" class="group flex items-center gap-3 px-4 py-2.5 rounded-xl {% if '/admin/' in request.path %}bg-gradient-to-r from-blue-600 to-blue-500 shadow-lg shadow-blue-500/30{% else %}text-slate-300 hover:bg-slate-800/70{% endif %} sidebar-transition">
+                                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                    </svg>
+                                    <span x-show="!sidebarCollapsed" class="font-medium">Admin Django</span>
+                                </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endif %}
+            </nav>
+
+            <!-- User Profile -->
+            <div class="p-4 border-t border-slate-800/50 bg-slate-950/50 backdrop-blur-sm flex-shrink-0">
+                <div x-show="!sidebarCollapsed" x-transition class="mb-3">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold">
+                            {{ request.user.first_name.0 }}{{ request.user.last_name.0 }}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-semibold text-white truncate">
+                                {{ request.user.first_name }} {{ request.user.last_name }}
+                            </p>
+                            <p class="text-xs text-slate-400">
+                                {% if request.user.is_teacher %}Professeur{% else %}Administrateur{% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <a href="{% url 'logout' %}" 
+                   class="flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-red-600 to-red-500 hover:from-red-700 hover:to-red-600 text-white rounded-xl sidebar-transition text-sm font-medium shadow-lg shadow-red-500/20">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                    </svg>
+                    <span x-show="!sidebarCollapsed">Déconnexion</span>
+                </a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 flex flex-col overflow-hidden bg-gradient-to-br from-gray-50 via-blue-50/30 to-gray-50">
+            <div class="lg:hidden sticky top-0 z-20 bg-white/90 backdrop-blur border-b border-gray-200 px-4 py-3 flex items-center gap-3 flex-shrink-0">
+                <button @click="mobileMenuOpen = true" class="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-slate-900 text-white shadow-lg shadow-slate-900/20">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                </button>
+                <div>
+                    <p class="text-xs text-gray-500 uppercase tracking-wide">Menu</p>
+                    <p class="text-sm font-semibold text-gray-800">Institut Torii</p>
+                </div>
+            </div>
+            <div class="flex-1 overflow-x-hidden overflow-y-auto">
+                <div class="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
+                    {% block content %}
+                    {% endblock %}
+                </div>
+            </div>
+        </main>
+    </div>
+
+    {% block extra_js %}{% endblock %}
+    <script src="{% static 'js/base.js' %}"></script>
+</body>
+</html>

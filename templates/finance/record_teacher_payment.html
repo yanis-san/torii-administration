@@ -1,0 +1,171 @@
+{% extends 'base.html' %}
+
+{% block title %}Payer {{ teacher.get_full_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-6">
+
+    <!-- Header -->
+    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+        <h1 class="text-2xl font-bold text-gray-800">Enregistrer un Paiement de Salaire</h1>
+        <p class="text-gray-600 mt-1">Pour {{ teacher.first_name }} {{ teacher.last_name }}</p>
+    </div>
+
+    <!-- Formulaire -->
+    <form method="post" class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        {% csrf_token %}
+
+        <div class="p-6 space-y-6">
+            <!-- Période -->
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Début de Période <span class="text-red-500">*</span>
+                    </label>
+                    <input type="date" name="period_start" value="{{ period_start }}" required
+                           class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Fin de Période <span class="text-red-500">*</span>
+                    </label>
+                    <input type="date" name="period_end" value="{{ period_end }}" required
+                           class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none">
+                </div>
+            </div>
+
+            <!-- Montant -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Montant Total <span class="text-red-500">*</span>
+                </label>
+                <div class="relative">
+                    <input type="number" name="total_amount" value="{{ amount_due }}" step="0.01" min="0" required
+                           class="w-full px-4 py-2 pr-12 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-lg font-bold text-green-600">
+                    <span class="absolute right-4 top-2.5 text-gray-500 font-medium">DA</span>
+                </div>
+                {% if amount_due %}
+                    <p class="text-sm text-gray-500 mt-1">Montant calculé pour la période sélectionnée</p>
+                {% endif %}
+            </div>
+
+            <!-- Méthode de Paiement -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Méthode de Paiement <span class="text-red-500">*</span>
+                </label>
+                <div class="grid grid-cols-3 gap-3">
+                    <label class="relative flex items-center p-4 border-2 rounded-lg cursor-pointer transition
+                                  {% if preferred_method == 'CASH' %}border-green-500 bg-green-50{% else %}border-gray-200 hover:border-gray-300{% endif %}">
+                        <input type="radio" name="payment_method" value="CASH" required
+                               {% if preferred_method == 'CASH' %}checked{% endif %}
+                               class="sr-only peer">
+                        <div class="text-center w-full">
+                            <div class="text-2xl mb-1">💵</div>
+                            <div class="text-sm font-medium text-gray-700">Espèces</div>
+                            {% if preferred_method == 'CASH' %}
+                                <div class="text-xs text-green-600 font-bold mt-1">Préféré</div>
+                            {% endif %}
+                        </div>
+                    </label>
+
+                    <label class="relative flex items-center p-4 border-2 rounded-lg cursor-pointer transition
+                                  {% if preferred_method == 'TRANSFER' %}border-blue-500 bg-blue-50{% else %}border-gray-200 hover:border-gray-300{% endif %}">
+                        <input type="radio" name="payment_method" value="TRANSFER" required
+                               {% if preferred_method == 'TRANSFER' %}checked{% endif %}
+                               class="sr-only peer">
+                        <div class="text-center w-full">
+                            <div class="text-2xl mb-1">🏦</div>
+                            <div class="text-sm font-medium text-gray-700">Virement</div>
+                            {% if preferred_method == 'TRANSFER' %}
+                                <div class="text-xs text-blue-600 font-bold mt-1">Préféré</div>
+                            {% endif %}
+                        </div>
+                    </label>
+
+                    <label class="relative flex items-center p-4 border-2 rounded-lg cursor-pointer transition
+                                  {% if preferred_method == 'CHECK' %}border-yellow-500 bg-yellow-50{% else %}border-gray-200 hover:border-gray-300{% endif %}">
+                        <input type="radio" name="payment_method" value="CHECK" required
+                               {% if preferred_method == 'CHECK' %}checked{% endif %}
+                               class="sr-only peer">
+                        <div class="text-center w-full">
+                            <div class="text-2xl mb-1">📝</div>
+                            <div class="text-sm font-medium text-gray-700">Chèque</div>
+                            {% if preferred_method == 'CHECK' %}
+                                <div class="text-xs text-yellow-600 font-bold mt-1">Préféré</div>
+                            {% endif %}
+                        </div>
+                    </label>
+                </div>
+                {% if profile and profile.bank_details %}
+                    <div class="mt-2 p-3 bg-blue-50 border border-blue-100 rounded-lg">
+                        <div class="text-xs text-blue-800 font-semibold">CCP/RIB du professeur :</div>
+                        <div class="text-sm text-blue-900 font-mono mt-1">{{ profile.bank_details }}</div>
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Date de Paiement -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Date de Paiement <span class="text-red-500">*</span>
+                </label>
+                <input type="date" name="payment_date" value="{{ today }}" required
+                       class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none">
+                <p class="text-sm text-gray-500 mt-1">Date à laquelle le paiement a été effectué</p>
+            </div>
+
+            <!-- Référence -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Référence / N° de Transaction
+                </label>
+                <input type="text" name="proof_reference" placeholder="N° de chèque, référence virement..."
+                       class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none">
+            </div>
+
+            <!-- Notes -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Notes Internes (Optionnel)
+                </label>
+                <textarea name="notes" rows="3"
+                          class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none"
+                          placeholder="Informations complémentaires sur ce paiement..."></textarea>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="p-6 border-t border-gray-100 bg-gray-50 flex justify-between items-center">
+            <a href="{% url 'finance:teacher_payroll_detail' teacher.id %}?start={{ period_start }}&end={{ period_end }}"
+               class="px-4 py-2 text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+                Annuler
+            </a>
+            <button type="submit" class="px-6 py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg shadow-sm transition">
+                Enregistrer le Paiement
+            </button>
+        </div>
+    </form>
+
+    <!-- Infos Professeur -->
+    {% if profile %}
+    <div class="bg-blue-50 border border-blue-100 p-4 rounded-xl">
+        <h3 class="font-bold text-blue-900 mb-2">Informations Professeur</h3>
+        <div class="space-y-1 text-sm text-blue-800">
+            <div><span class="font-semibold">Email :</span> {{ teacher.email }}</div>
+            <div><span class="font-semibold">Téléphone :</span> {{ teacher.phone }}</div>
+            {% if profile.tax_id %}
+                <div><span class="font-semibold">NIF :</span> {{ profile.tax_id }}</div>
+            {% endif %}
+            {% if profile.notes %}
+                <div class="mt-2 pt-2 border-t border-blue-200">
+                    <span class="font-semibold">Notes :</span>
+                    <div class="mt-1 text-blue-700">{{ profile.notes }}</div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

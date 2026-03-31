@@ -1,0 +1,115 @@
+{% extends 'base.html' %}
+
+{% block title %}Changer le Professeur - Séance {{ session.date }}{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto space-y-6 px-4 sm:px-6">
+    
+    <!-- En-tête -->
+    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+        <h1 class="text-2xl font-bold text-gray-800 mb-2">Changer le Professeur</h1>
+        <p class="text-gray-600">
+            <span class="font-semibold">{{ session.cohort.name }}</span><br>
+            {{ session.date|date:"l d F Y" }} • {{ session.start_time|time:"H:i" }} - {{ session.end_time|time:"H:i" }}
+        </p>
+        
+        <div class="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div class="flex items-start gap-3">
+                <svg class="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+                </svg>
+                <div class="text-sm text-blue-800">
+                    <p class="font-semibold mb-1">Information importante</p>
+                    <p>Le professeur que vous sélectionnez sera payé pour cette séance uniquement. Les autres séances du groupe continueront d'être payées au professeur titulaire.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Professeur actuel -->
+    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+        <h3 class="font-semibold text-gray-700 mb-3">Professeur actuel de cette séance</h3>
+        <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+            <svg class="w-8 h-8 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path>
+            </svg>
+            <div>
+                <p class="font-medium text-gray-900">{{ session.teacher.get_full_name }}</p>
+                <p class="text-sm text-gray-500">Professeur de cette séance</p>
+            </div>
+        </div>
+        
+        {% if cohort_teacher and cohort_teacher != session.teacher %}
+        <div class="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <p class="text-sm text-yellow-800">
+                <span class="font-semibold">Note:</span> Le professeur titulaire du groupe est 
+                <span class="font-medium">{{ cohort_teacher.get_full_name }}</span>
+            </p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Formulaire de changement -->
+    <form method="post" class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 space-y-4" x-data="{ selectedTeacher: '{{ session.teacher.id }}' }">
+        {% csrf_token %}
+        
+        <div>
+            <label for="teacher_id" class="block text-sm font-medium text-gray-700 mb-2">
+                Sélectionner le nouveau professeur
+            </label>
+            
+            <!-- Professeurs suggérés (titulaire + suppléant) -->
+            {% if cohort_teacher or substitute_teacher %}
+            <div class="mb-4 space-y-2">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Professeurs du groupe</p>
+                
+                {% if cohort_teacher %}
+                <label class="flex items-center gap-3 p-3 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition {% if cohort_teacher == session.teacher %}border-blue-500 bg-blue-50{% else %}border-gray-200{% endif %}">
+                    <input type="radio" name="teacher_id" value="{{ cohort_teacher.id }}" x-model="selectedTeacher" class="w-4 h-4 text-blue-600 focus:ring-blue-500" {% if cohort_teacher == session.teacher %}checked{% endif %}>
+                    <div class="flex-1">
+                        <p class="font-medium text-gray-900">{{ cohort_teacher.get_full_name }}</p>
+                        <p class="text-xs text-gray-500">Professeur titulaire</p>
+                    </div>
+                </label>
+                {% endif %}
+                
+                {% if substitute_teacher %}
+                <label class="flex items-center gap-3 p-3 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition {% if substitute_teacher == session.teacher %}border-blue-500 bg-blue-50{% else %}border-gray-200{% endif %}">
+                    <input type="radio" name="teacher_id" value="{{ substitute_teacher.id }}" x-model="selectedTeacher" class="w-4 h-4 text-blue-600 focus:ring-blue-500" {% if substitute_teacher == session.teacher %}checked{% endif %}>
+                    <div class="flex-1">
+                        <p class="font-medium text-gray-900">{{ substitute_teacher.get_full_name }}</p>
+                        <p class="text-xs text-gray-500">Professeur suppléant</p>
+                    </div>
+                </label>
+                {% endif %}
+            </div>
+            {% endif %}
+            
+            <!-- Tous les professeurs -->
+            <div class="mt-4">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Tous les professeurs</p>
+                <select name="teacher_id" id="teacher_id" x-model="selectedTeacher" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <option value="">-- Sélectionner un professeur --</option>
+                    {% for teacher in all_teachers %}
+                    <option value="{{ teacher.id }}" {% if teacher == session.teacher %}selected{% endif %}>
+                        {{ teacher.get_full_name }}
+                        {% if teacher == cohort_teacher %}(Titulaire){% endif %}
+                        {% if teacher == substitute_teacher %}(Suppléant){% endif %}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div class="flex gap-3 pt-4">
+            <button type="submit" class="flex-1 px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition shadow-sm">
+                Confirmer le changement
+            </button>
+            <a href="{% url 'academics:session_detail' session.id %}" class="px-6 py-3 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition">
+                Annuler
+            </a>
+        </div>
+    </form>
+
+</div>
+{% endblock %}

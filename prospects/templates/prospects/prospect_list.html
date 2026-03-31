@@ -1,0 +1,221 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Prospects{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/prospects/prospect_list.css' %}">
+{% endblock %}
+{% block content %}
+<div id="prospects-page-config"
+  data-upload-csv-url="{% url 'prospects:upload_csv' %}"
+  data-upload-detail-template="{% url 'prospects:upload_detail' 0 %}"
+  data-get-prospect-data-template="{% url 'prospects:get_prospect_data' 0 %}"
+  data-cancel-conversion-template="{% url 'prospects:cancel_conversion' 0 %}"
+  data-delete-prospect-template="{% url 'prospects:delete_prospect' 0 %}"
+  data-enrollment-form-url="{% url 'students:enrollment_form' %}"
+  class="hidden"></div>
+<div class="px-4 py-4">
+  <div class="flex items-center justify-between mb-4">
+    <h1 class="text-2xl font-semibold">Prospects</h1>
+    <div class="flex items-center gap-3">
+      <div class="text-sm text-slate-500">Total: {{ total }} • Convertis: {{ converted }} • À convertir: {{ not_converted }}</div>
+      <button hx-get="{% url 'prospects:add_prospect' %}" hx-target="body" hx-swap="beforeend"
+              class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-medium">
+        + Ajouter un prospect
+      </button>
+    </div>
+  </div>
+
+  <div class="bg-white rounded-lg shadow p-4 mb-6">
+    <h2 class="font-medium mb-3">Importer un fichier CSV</h2>
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+      <div class="flex-1">
+        <div id="dropzone" class="dropzone rounded-md p-6 text-center text-slate-500">
+          Glissez-déposez votre CSV ici
+          <input id="fileInput" type="file" accept=".csv" class="hidden" />
+        </div>
+        <div class="mt-3 flex items-center justify-center">
+          <button id="uploadBtn" type="button" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium">
+            Choisir un fichier CSV
+          </button>
+        </div>
+        <div id="uploadStatus" class="mt-2 text-sm"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bg-white rounded-lg shadow mb-6">
+    <form method="get" class="p-4 border-b border-slate-100">
+      <input type="hidden" name="sort" value="{{ sort }}" />
+      <input type="hidden" name="dir" value="{{ direction }}" />
+      <div class="grid grid-cols-1 md:grid-cols-6 gap-3">
+        <div class="relative col-span-1 md:col-span-2">
+          <input name="q" value="{{ q }}" placeholder="Rechercher (nom, email, téléphone)" 
+                 class="form-input px-3 py-2 pr-16 rounded w-full"
+                 hx-get="{% url 'prospects:list' %}"
+                 hx-trigger="keyup changed delay:500ms"
+                 hx-target="#prospects-tbody"
+                 hx-include="[name='converted'], [name='source'], [name='activity_type'], [name='level'], [name='start'], [name='end'], [name='per_page'], [name='sort'], [name='dir']" />
+          <span class="absolute right-3 top-2.5 text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded border border-gray-200 font-mono">Ctrl+K</span>
+        </div>
+
+        <select name="converted" class="form-input px-3 py-2 rounded">
+          <option value="" {% if not f_converted %}selected{% endif %}>Tous</option>
+          <option value="yes" {% if f_converted == 'yes' %}selected{% endif %}>Convertis</option>
+          <option value="no" {% if f_converted == 'no' %}selected{% endif %}>À convertir</option>
+        </select>
+
+        <select name="source" class="form-input px-3 py-2 rounded">
+          <option value="">Source</option>
+          {% for s in distinct_sources %}
+            <option value="{{ s }}" {% if f_source == s %}selected{% endif %}>{{ s }}</option>
+          {% endfor %}
+        </select>
+
+        <select name="activity_type" class="form-input px-3 py-2 rounded">
+          <option value="">Activité</option>
+          {% for s in distinct_activities %}
+            <option value="{{ s }}" {% if f_activity_type == s %}selected{% endif %}>{{ s }}</option>
+          {% endfor %}
+        </select>
+
+        <select name="level" class="form-input px-3 py-2 rounded">
+          <option value="">Niveau</option>
+          {% for s in distinct_levels %}
+            <option value="{{ s }}" {% if f_level == s %}selected{% endif %}>{{ s }}</option>
+          {% endfor %}
+        </select>
+
+        <div class="flex gap-2">
+          <input type="date" name="start" value="{{ f_start }}" class="form-input px-3 py-2 rounded w-1/2" />
+          <input type="date" name="end" value="{{ f_end }}" class="form-input px-3 py-2 rounded w-1/2" />
+        </div>
+      </div>
+      <div class="mt-3 flex items-center gap-2">
+        <select name="per_page" class="form-input px-3 py-2 rounded">
+          <option value="25" {% if per_page == 25 %}selected{% endif %}>25/page</option>
+          <option value="50" {% if per_page == 50 %}selected{% endif %}>50/page</option>
+          <option value="100" {% if per_page == 100 %}selected{% endif %}>100/page</option>
+        </select>
+        <button type="submit" class="btn btn-primary">Filtrer</button>
+        <a href="?" class="btn btn-muted">Réinitialiser</a>
+      </div>
+    </form>
+
+    <div class="overflow-auto">
+      <table class="w-full table-auto">
+        <thead class="bg-slate-50">
+          <tr>
+            <th class="px-4 py-2 text-left text-slate-600 text-sm">
+              <a class="flex items-center gap-1" href="?sort=name&dir={% if sort == 'name' and direction == 'asc' %}desc{% else %}asc{% endif %}{% if base_query %}&{{ base_query }}{% endif %}">
+                Nom
+                {% if sort == 'name' %}<span class="text-xs">{% if direction == 'asc' %}↑{% else %}↓{% endif %}</span>{% endif %}
+              </a>
+            </th>
+            <th class="px-4 py-2 text-left text-slate-600 text-sm">
+              <a class="flex items-center gap-1" href="?sort=contact&dir={% if sort == 'contact' and direction == 'asc' %}desc{% else %}asc{% endif %}{% if base_query %}&{{ base_query }}{% endif %}">
+                Contact
+                {% if sort == 'contact' %}<span class="text-xs">{% if direction == 'asc' %}↑{% else %}↓{% endif %}</span>{% endif %}
+              </a>
+            </th>
+            <th class="px-4 py-2 text-left text-slate-600 text-sm">
+              <a class="flex items-center gap-1" href="?sort=level&dir={% if sort == 'level' and direction == 'asc' %}desc{% else %}asc{% endif %}{% if base_query %}&{{ base_query }}{% endif %}">
+                Niveau
+                {% if sort == 'level' %}<span class="text-xs">{% if direction == 'asc' %}↑{% else %}↓{% endif %}</span>{% endif %}
+              </a>
+            </th>
+            <th class="px-4 py-2 text-left text-slate-600 text-sm">
+              <a class="flex items-center gap-1" href="?sort=activity&dir={% if sort == 'activity' and direction == 'asc' %}desc{% else %}asc{% endif %}{% if base_query %}&{{ base_query }}{% endif %}">
+                Activité
+                {% if sort == 'activity' %}<span class="text-xs">{% if direction == 'asc' %}↑{% else %}↓{% endif %}</span>{% endif %}
+              </a>
+            </th>
+            <th class="px-4 py-2 text-left text-slate-600 text-sm">
+              <a class="flex items-center gap-1" href="?sort=source&dir={% if sort == 'source' and direction == 'asc' %}desc{% else %}asc{% endif %}{% if base_query %}&{{ base_query }}{% endif %}">
+                Source
+                {% if sort == 'source' %}<span class="text-xs">{% if direction == 'asc' %}↑{% else %}↓{% endif %}</span>{% endif %}
+              </a>
+            </th>
+            <th class="px-4 py-2 text-left text-slate-600 text-sm">
+              <a class="flex items-center gap-1" href="?sort=status&dir={% if sort == 'status' and direction == 'asc' %}desc{% else %}asc{% endif %}{% if base_query %}&{{ base_query }}{% endif %}">
+                Statut
+                {% if sort == 'status' %}<span class="text-xs">{% if direction == 'asc' %}↑{% else %}↓{% endif %}</span>{% endif %}
+              </a>
+            </th>
+            <th class="px-4 py-2 text-left text-slate-600 text-sm">
+              <a class="flex items-center gap-1" href="?sort=created_at&dir={% if sort == 'created_at' and direction == 'asc' %}desc{% else %}asc{% endif %}{% if base_query %}&{{ base_query }}{% endif %}">
+                Créé le
+                {% if sort == 'created_at' %}<span class="text-xs">{% if direction == 'asc' %}↑{% else %}↓{% endif %}</span>{% endif %}
+              </a>
+            </th>
+            <th class="px-4 py-2 text-left text-slate-600 text-sm">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="prospects-tbody">
+          {% for p in prospects %}
+          <tr class="border-t">
+            <td class="px-4 py-2">
+              <div class="font-medium">{{ p.first_name }} {{ p.last_name }}</div>
+            </td>
+            <td class="px-4 py-2 text-sm text-slate-600">
+              {% if p.email %}{{ p.email }}{% endif %}{% if p.phone %}{% if p.email %} • {% endif %}{{ p.phone }}{% endif %}
+            </td>
+            <td class="px-4 py-2 text-sm">{{ p.level|default:'—' }}</td>
+            <td class="px-4 py-2 text-sm">{{ p.activity_type|default:'—' }}</td>
+            <td class="px-4 py-2 text-sm">{{ p.source|default:'—' }}</td>
+            <td class="px-4 py-2">
+              {% if p.converted %}
+                <span class="badge badge-green">Converti</span>
+              {% else %}
+                <span class="badge badge-amber">À convertir</span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-2 text-sm text-slate-600">{{ p.created_at|date:'d/m/Y H:i' }}</td>
+            <td class="px-4 py-2">
+              <div class="flex items-center gap-1 flex-nowrap">
+                {% if not p.converted %}
+                  <button type="button" class="px-3 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 whitespace-nowrap" data-prospect-action="convert" data-prospect-id="{{ p.id }}">Convertir</button>
+                {% else %}
+                  <button type="button" class="px-3 py-1 bg-orange-600 text-white rounded text-xs hover:bg-orange-700 whitespace-nowrap" data-prospect-action="cancel" data-prospect-id="{{ p.id }}">Annuler</button>
+                {% endif %}
+                <button hx-get="{% url 'prospects:edit_prospect' p.id %}" hx-target="body" hx-swap="beforeend"
+                        class="px-2 py-1 bg-amber-500 text-white rounded text-xs hover:bg-amber-600" title="Modifier">
+                  ✏️
+                </button>
+                <button type="button" data-prospect-action="delete" data-prospect-id="{{ p.id }}"
+                        class="px-2 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600" title="Supprimer">
+                  🗑️
+                </button>
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="8" class="px-4 py-6 text-center text-slate-500">Aucun prospect trouvé.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if page_obj.paginator.num_pages > 1 %}
+    <div class="flex items-center justify-between px-4 py-3 border-t">
+      <div class="text-sm text-slate-600">Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</div>
+      <div class="flex items-center gap-2">
+        {% if page_obj.has_previous %}
+          <a class="btn btn-muted" href="?page={{ page_obj.previous_page_number }}&sort={{ sort }}&dir={{ direction }}{% if base_query %}&{{ base_query }}{% endif %}">Précédent</a>
+        {% else %}
+          <button class="btn btn-muted" disabled>Précédent</button>
+        {% endif %}
+        {% if page_obj.has_next %}
+          <a class="btn btn-muted" href="?page={{ page_obj.next_page_number }}&sort={{ sort }}&dir={{ direction }}{% if base_query %}&{{ base_query }}{% endif %}">Suivant</a>
+        {% else %}
+          <button class="btn btn-muted" disabled>Suivant</button>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<script src="{% static 'js/prospects/prospect_list.js' %}"></script>
+{% endblock %}

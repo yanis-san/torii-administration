@@ -1,0 +1,241 @@
+{% load static %}
+
+<div class="space-y-3">
+    {% if tasks %}
+        {% for task in tasks %}
+        <div class="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition" 
+             x-data="{ showDetails: false }">
+            
+            <div class="flex items-start gap-4">
+                
+                <!-- Checkbox pour marquer comme terminé -->
+                <form method="post" 
+                      hx-post="{% url 'tasks:toggle_complete' task.id %}"
+                      hx-target="#tasks-wrapper"
+                      hx-swap="outerHTML">
+                    {% csrf_token %}
+                    <button type="submit" 
+                            class="mt-1 w-6 h-6 rounded-full border-2 flex items-center justify-center transition
+                                   {% if task.is_completed %}
+                                   bg-green-500 border-green-500
+                                   {% else %}
+                                   border-gray-300 hover:border-green-500
+                                   {% endif %}">
+                        {% if task.is_completed %}
+                            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                            </svg>
+                        {% endif %}
+                    </button>
+                </form>
+
+                <!-- Contenu de la tâche -->
+                <div class="flex-1 min-w-0">
+                    
+                    <!-- Titre et priorité -->
+                    <div class="flex items-start justify-between gap-2 mb-2">
+                        <div class="flex-1">
+                            <h3 class="text-lg font-semibold {% if task.is_completed %}text-gray-400 line-through{% else %}text-gray-900{% endif %}">
+                                {{ task.title }}
+                            </h3>
+                            
+                            <!-- Debug info (temporaire) -->
+                            <!-- Student: {{ task.student|default:"None" }} | Prospect: {{ task.prospect|default:"None" }} | External: {{ task.external_person_name|default:"None" }} -->
+                            
+                            <!-- Personne liée (mise en évidence) -->
+                            {% if task.student or task.prospect or task.external_person_name %}
+                            <div class="flex items-center gap-2 mt-1 text-sm">
+                                {% if task.student %}
+                                <span class="inline-flex items-center px-2.5 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded-full font-medium">
+                                    👤 {{ task.student.first_name }} {{ task.student.last_name }}
+                                </span>
+                                {% if task.student.phone %}
+                                <span class="inline-flex items-center px-2.5 py-1 bg-green-50 text-green-700 border border-green-200 rounded-full font-medium">
+                                    📱 {{ task.student.phone }}
+                                </span>
+                                {% endif %}
+                                {% elif task.prospect %}
+                                <span class="inline-flex items-center px-2.5 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded-full font-medium">
+                                    👤 {{ task.prospect.first_name }} {{ task.prospect.last_name }}
+                                </span>
+                                {% if task.prospect.phone %}
+                                <span class="inline-flex items-center px-2.5 py-1 bg-green-50 text-green-700 border border-green-200 rounded-full font-medium">
+                                    📱 {{ task.prospect.phone }}
+                                </span>
+                                {% endif %}
+                                {% elif task.external_person_name %}
+                                <span class="inline-flex items-center px-2.5 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded-full font-medium">
+                                    👤 {{ task.external_person_name }}
+                                </span>
+                                {% if task.external_person_phone %}
+                                <span class="inline-flex items-center px-2.5 py-1 bg-green-50 text-green-700 border border-green-200 rounded-full font-medium">
+                                    📱 {{ task.external_person_phone }}
+                                </span>
+                                {% endif %}
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                            
+                            <!-- Badge de catégorie -->
+                            {% if task.category %}
+                                <span class="task-category-chip inline-flex items-center px-2 py-1 text-xs font-medium rounded-full mt-1"
+                                    data-category-color="{{ task.category.color }}"
+                                    data-category-bg-alpha="0.13"
+                                    data-category-border-alpha="0.33">
+                                📁 {{ task.category.name }}
+                            </span>
+                            {% endif %}
+                            
+                            <!-- Badge utilisateur assigné -->
+                            {% if task.assigned_to %}
+                            <span class="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full mt-1 bg-purple-50 text-purple-700 border border-purple-200">
+                                👨‍💼 {{ task.assigned_to.username }}
+                            </span>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Badge de priorité -->
+                        {% if task.priority == 'URGENT' %}
+                            <span class="px-2 py-1 bg-red-100 text-red-700 text-xs font-bold rounded-full">🔥 URGENT</span>
+                        {% elif task.priority == 'HIGH' %}
+                            <span class="px-2 py-1 bg-orange-100 text-orange-700 text-xs font-medium rounded-full">⚠️ Haute</span>
+                        {% elif task.priority == 'MEDIUM' %}
+                            <span class="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs font-medium rounded-full">📌 Moyenne</span>
+                        {% else %}
+                            <span class="px-2 py-1 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">📎 Basse</span>
+                        {% endif %}
+                    </div>
+
+                    <!-- Description -->
+                    {% if task.description %}
+                    <p class="text-gray-600 text-sm mb-3 {% if task.is_completed %}line-through{% endif %}">
+                        {{ task.description|truncatewords:30 }}
+                    </p>
+                    {% endif %}
+
+                    <!-- Informations -->
+                    <div class="flex flex-wrap items-center gap-4 text-sm text-gray-600 mb-3">
+                        
+                        <!-- Date de création -->
+                        <div class="flex items-center gap-1">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <span>{{ task.created_at|date:"d/m/Y H:i" }}</span>
+                        </div>
+
+                        <!-- Date planifiée -->
+                        {% if task.scheduled_date %}
+                        <div class="flex items-center gap-1 bg-blue-50 px-2 py-1 rounded
+                                    {% if not task.is_completed and task.scheduled_date < today %}
+                                    text-red-600 font-bold
+                                    {% elif not task.is_completed and task.scheduled_date == today %}
+                                    text-blue-700 font-bold
+                                    {% else %}
+                                    text-blue-600
+                                    {% endif %}">
+                            <span>📅</span>
+                            <span>Planifiée: {{ task.scheduled_date|date:"d/m/Y" }}</span>
+                        </div>
+                        {% endif %}
+
+                        <!-- Deadline -->
+                        {% if task.deadline %}
+                        <div class="flex items-center gap-1 
+                                    {% if not task.is_completed and task.deadline < today %}
+                                    text-red-600 font-bold
+                                    {% elif not task.is_completed and task.deadline == today %}
+                                    text-orange-600 font-bold
+                                    {% endif %}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                            </svg>
+                            <span>Deadline: {{ task.deadline|date:"d/m/Y" }}</span>
+                        </div>
+                        {% endif %}
+
+                        <!-- Date de complétion -->
+                        {% if task.is_completed and task.completed_at %}
+                        <div class="flex items-center gap-1 text-green-600">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <span>Terminée le {{ task.completed_at|date:"d/m/Y H:i" }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="flex items-center gap-2 pt-2 border-t border-gray-100">
+                        <button @click="showDetails = !showDetails" 
+                                class="text-sm text-indigo-600 hover:text-indigo-700 font-medium">
+                            <span x-show="!showDetails">📝 Voir détails</span>
+                            <span x-show="showDetails">🔼 Masquer</span>
+                        </button>
+                        
+                        <a href="{% url 'tasks:edit' task.id %}" 
+                           class="text-sm text-blue-600 hover:text-blue-700 font-medium">
+                            ✏️ Modifier
+                        </a>
+                        
+                        <form method="post" 
+                              hx-post="{% url 'tasks:delete' task.id %}"
+                              hx-confirm="Êtes-vous sûr de vouloir supprimer cette tâche ?"
+                              hx-target="#tasks-wrapper"
+                              hx-swap="outerHTML"
+                              class="inline">
+                            {% csrf_token %}
+                            <button type="submit" 
+                                    class="text-sm text-red-600 hover:text-red-700 font-medium">
+                                🗑️ Supprimer
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Détails complets (Alpine.js toggle) -->
+                    <div x-show="showDetails" 
+                         x-transition
+                         class="mt-4 pt-4 border-t border-gray-200 space-y-2">
+                        
+                        {% if task.description %}
+                        <div>
+                            <p class="text-xs font-semibold text-gray-500 uppercase mb-1">Description complète</p>
+                            <p class="text-gray-700">{{ task.description }}</p>
+                        </div>
+                        {% endif %}
+
+                        {% if task.notes %}
+                        <div>
+                            <p class="text-xs font-semibold text-gray-500 uppercase mb-1">Notes</p>
+                            <p class="text-gray-700 whitespace-pre-line">{{ task.notes }}</p>
+                        </div>
+                        {% endif %}
+
+                        {% if task.created_by %}
+                        <div>
+                            <p class="text-xs font-semibold text-gray-500 uppercase mb-1">Créée par</p>
+                            <p class="text-gray-700">{{ task.created_by.get_full_name|default:task.created_by.username }}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-12 text-center">
+            <svg class="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+            </svg>
+            <p class="text-gray-600 text-lg mb-2">Aucune tâche trouvée</p>
+            <p class="text-gray-500 text-sm mb-4">Créez votre première tâche pour commencer</p>
+            <a href="{% url 'tasks:create' %}" 
+               class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg font-medium transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                </svg>
+                Nouvelle Tâche
+            </a>
+        </div>
+    {% endif %}
+</div>

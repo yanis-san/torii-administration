@@ -1,0 +1,237 @@
+{% extends 'base.html' %}
+{% load custom_filters %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="space-y-6 px-4 sm:px-0">
+
+    <!-- Header -->
+    <div class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-6 rounded-xl shadow-lg">
+        <div class="flex items-center gap-4">
+            <a href="{% url 'academics:detail' cohort.id %}" class="hover:bg-white/20 p-2 rounded-lg transition">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                </svg>
+            </a>
+            <div>
+                <h1 class="text-3xl font-bold">Ajouter une Séance</h1>
+                <p class="text-indigo-100 mt-1">{{ cohort.name }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Info: Planning automatique -->
+    {% if next_scheduled %}
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div class="flex items-start gap-3">
+            <svg class="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M18 5v8a2 2 0 01-2 2h-5l-5 4v-4H4a2 2 0 01-2-2V5a2 2 0 012-2h12a2 2 0 012 2zm-11-1a1 1 0 11-2 0 1 1 0 012 0zm3 1a1 1 0 100-2 1 1 0 000 2zm3 1a1 1 0 11-2 0 1 1 0 012 0zm3-1a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"></path>
+            </svg>
+            <div class="flex-1">
+                <h3 class="font-semibold text-blue-900">Planning Proposé</h3>
+                <p class="text-sm text-blue-800 mt-1">
+                    <span class="font-semibold">{{ next_scheduled.day_name }}</span> 
+                    <span class="font-semibold">{{ next_scheduled.date|date:"d/m/Y" }}</span> 
+                    de 
+                    <span class="font-semibold">{{ next_scheduled.start_time|time:"H:i" }}</span> 
+                    à 
+                    <span class="font-semibold">{{ next_scheduled.end_time|time:"H:i" }}</span>
+                    {% if next_scheduled.classroom %}
+                    en 
+                    <span class="font-semibold">{{ next_scheduled.classroom.name }}</span>
+                    {% endif %}
+                </p>
+                <p class="text-xs text-blue-700 mt-2 italic">
+                    💡 Les champs date/heure sont pré-remplis selon votre planning hebdomadaire. 
+                    Vous pouvez les modifier si nécessaire.
+                </p>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="bg-amber-50 border border-amber-200 rounded-lg p-4">
+        <div class="flex items-start gap-3">
+            <svg class="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+            </svg>
+            <div class="flex-1">
+                <h3 class="font-semibold text-amber-900">Aucun planning trouvé</h3>
+                <p class="text-sm text-amber-800 mt-1">
+                    Veuillez saisir manuellement la date et les horaires de cette séance.
+                </p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Formulaire -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <form method="post" class="space-y-6">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+            <div class="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                {{ form.non_field_errors }}
+            </div>
+            {% endif %}
+
+            <!-- Row 1: Date & Heure -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label for="{{ form.date.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-2">
+                        {{ form.date.label }}
+                    </label>
+                    {{ form.date }}
+                    <p class="text-xs text-gray-500 mt-1">Optionnel - Sera rempli selon le planning</p>
+                    {% if form.date.errors %}
+                    <p class="text-red-500 text-xs mt-1">{{ form.date.errors }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label for="{{ form.start_time.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-2">
+                        {{ form.start_time.label }}
+                    </label>
+                    {{ form.start_time }}
+                    <p class="text-xs text-gray-500 mt-1">Optionnel - Sera rempli selon le planning</p>
+                    {% if form.start_time.errors %}
+                    <p class="text-red-500 text-xs mt-1">{{ form.start_time.errors }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label for="{{ form.end_time.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-2">
+                        {{ form.end_time.label }}
+                    </label>
+                    {{ form.end_time }}
+                    <p class="text-xs text-gray-500 mt-1">Optionnel - Sera rempli selon le planning</p>
+                    {% if form.end_time.errors %}
+                    <p class="text-red-500 text-xs mt-1">{{ form.end_time.errors }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Row 2: Professeur & Salle -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="{{ form.teacher.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-2">
+                        {{ form.teacher.label }}
+                        <span class="text-red-500">*</span>
+                    </label>
+                    {{ form.teacher }}
+                    {% if form.teacher.errors %}
+                    <p class="text-red-500 text-xs mt-1">{{ form.teacher.errors }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label for="{{ form.classroom.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-2">
+                        {{ form.classroom.label }}
+                        <span class="text-red-500">*</span>
+                    </label>
+                    {{ form.classroom }}
+                    {% if form.classroom.errors %}
+                    <p class="text-red-500 text-xs mt-1">{{ form.classroom.errors }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Row 3: Statut -->
+            <div>
+                <label for="{{ form.status.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-2">
+                    {{ form.status.label }}
+                    <span class="text-red-500">*</span>
+                </label>
+                {{ form.status }}
+                {% if form.status.errors %}
+                <p class="text-red-500 text-xs mt-1">{{ form.status.errors }}</p>
+                {% endif %}
+                <p class="text-xs text-gray-500 mt-1">
+                    <span class="font-semibold">SCHEDULED:</span> Prévu
+                    <span class="font-semibold ml-2">COMPLETED:</span> Réalisé
+                    <span class="font-semibold ml-2">CANCELLED:</span> Annulé
+                </p>
+            </div>
+
+            <!-- Row 4: Surcharges (optionnel) -->
+            <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <h3 class="font-semibold text-gray-700 mb-4 text-sm">Surcharges Optionnelles</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="{{ form.duration_override_minutes.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            {{ form.duration_override_minutes.label }}
+                        </label>
+                        {{ form.duration_override_minutes }}
+                        <p class="text-xs text-gray-500 mt-1">Laissez vide pour calculer automatiquement (end_time - start_time)</p>
+                        {% if form.duration_override_minutes.errors %}
+                        <p class="text-red-500 text-xs mt-1">{{ form.duration_override_minutes.errors }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label for="{{ form.teacher_hourly_rate_override.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            {{ form.teacher_hourly_rate_override.label }}
+                        </label>
+                        {{ form.teacher_hourly_rate_override }}
+                        <p class="text-xs text-gray-500 mt-1">Laissez vide pour utiliser le tarif du cohort ({{ cohort.teacher_hourly_rate }} DA/h)</p>
+                        {% if form.teacher_hourly_rate_override.errors %}
+                        <p class="text-red-500 text-xs mt-1">{{ form.teacher_hourly_rate_override.errors }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Row 5: Notes -->
+            <div>
+                <label for="{{ form.note.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-2">
+                    {{ form.note.label }}
+                </label>
+                {{ form.note }}
+                <p class="text-xs text-gray-500 mt-1">Facultatif - Informations complémentaires sur cette séance</p>
+                {% if form.note.errors %}
+                <p class="text-red-500 text-xs mt-1">{{ form.note.errors }}</p>
+                {% endif %}
+            </div>
+
+            <!-- Boutons d'action -->
+            <div class="flex gap-3 pt-4 border-t border-gray-100">
+                <button type="submit" class="px-6 py-2 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition shadow-sm">
+                    ✓ Ajouter la Séance
+                </button>
+                <a href="{% url 'academics:detail' cohort.id %}" class="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 transition">
+                    Annuler
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Infos cohort -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+            <div class="text-xs text-gray-500 uppercase font-semibold">Professeur Titulaire</div>
+            <div class="text-lg font-bold text-gray-800 mt-1">{{ cohort.teacher.get_full_name }}</div>
+            <div class="text-sm text-gray-600 mt-1">{{ cohort.teacher_hourly_rate }} DA/h</div>
+        </div>
+
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+            <div class="text-xs text-gray-500 uppercase font-semibold">Période du Cohort</div>
+            <div class="text-lg font-bold text-gray-800 mt-1">{{ cohort.start_date|date:"d/m" }} - {{ cohort.end_date|date:"d/m/Y" }}</div>
+        </div>
+
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+            <div class="text-xs text-gray-500 uppercase font-semibold">Salles Disponibles</div>
+            <div class="flex flex-wrap gap-2 mt-2">
+                {% for schedule in cohort.weekly_schedules.all %}
+                    <span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded">
+                        {{ schedule.classroom.name }}
+                    </span>
+                {% empty %}
+                    <span class="text-gray-400 text-sm italic">Aucune salle configurée</span>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

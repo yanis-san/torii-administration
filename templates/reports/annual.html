@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="p-4">
+  <h1 class="text-2xl font-semibold mb-4">Rapports Annuels (Année Académique)</h1>
+
+  <form method="get" class="flex flex-wrap items-end gap-3 mb-4">
+    <div>
+      <label class="block text-sm">Année académique</label>
+      <select name="year" class="border rounded px-3 py-2 min-w-56">
+        <option value="">Toutes les années</option>
+        {% for y in years %}
+        <option value="{{ y.id }}" {% if selected_year and selected_year.id == y.id %}selected{% endif %}>{{ y.label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="block text-sm">Modalité</label>
+      <select name="modality" class="border rounded px-3 py-2 min-w-40">
+        <option value="">Toutes</option>
+        <option value="IN_PERSON" {% if modality_filter == 'IN_PERSON' %}selected{% endif %}>Présentiel</option>
+        <option value="ONLINE" {% if modality_filter == 'ONLINE' %}selected{% endif %}>En ligne</option>
+      </select>
+    </div>
+    <div>
+      <label class="block text-sm">Individuel</label>
+      <select name="individual" class="border rounded px-3 py-2 min-w-40">
+        <option value="">Tous</option>
+        <option value="1" {% if individual_filter == '1' %}selected{% endif %}>Oui</option>
+        <option value="0" {% if individual_filter == '0' %}selected{% endif %}>Non</option>
+      </select>
+    </div>
+    <button class="bg-blue-600 text-white px-4 py-2 rounded">Appliquer</button>
+  </form>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div class="bg-white border rounded-lg p-4">
+      <h2 class="font-semibold mb-2">PDF global</h2>
+      <p class="text-sm text-gray-600 mb-3">Tous les étudiants inscrits pour l'année sélectionnée, groupés par matière puis par groupe.</p>
+      <a class="bg-blue-600 text-white px-4 py-2 rounded" target="_blank"
+         href="{% url 'reports:annual_enrollments_pdf' %}?year={{ selected_year_value }}&modality={{ modality_filter }}&individual={{ individual_filter }}">Générer PDF</a>
+    </div>
+
+    <div class="bg-white border rounded-lg p-4">
+      <h2 class="font-semibold mb-2">CSV (Excel)</h2>
+      <p class="text-sm text-gray-600 mb-3">Liste à plat des inscriptions avec paiements et restes à payer.</p>
+      <a class="bg-amber-600 text-white px-4 py-2 rounded"
+         href="{% url 'reports:annual_enrollments_csv' %}?year={{ selected_year_value }}&modality={{ modality_filter }}&individual={{ individual_filter }}">Télécharger CSV</a>
+    </div>
+
+    <div class="bg-white border rounded-lg p-4">
+      <h2 class="font-semibold mb-2">ZIP par Groupe</h2>
+      <p class="text-sm text-gray-600 mb-3">Un PDF par groupe pour l'année sélectionnée (classement par matière).</p>
+      <a class="bg-emerald-600 text-white px-4 py-2 rounded"
+         href="{% url 'reports:annual_enrollments_zip' %}?year={{ selected_year_value }}&modality={{ modality_filter }}&individual={{ individual_filter }}">Télécharger ZIP</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,1 @@
+# Prospects app URL configuration
