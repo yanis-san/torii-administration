@@ -29,6 +29,10 @@ STORAGES = {
     },
 }
 
+# Static & Media paths (override to point to cPanel subdomain folders)
+STATIC_ROOT = os.getenv('STATIC_ROOT', BASE_DIR / 'staticfiles')
+MEDIA_ROOT = os.getenv('MEDIA_ROOT', BASE_DIR / 'media')
+
 # Optional: allow Django app to serve media if cPanel static mapping is unavailable.
 SERVE_MEDIA_WITH_DJANGO = os.getenv('SERVE_MEDIA_WITH_DJANGO', 'False').strip().lower() in {'1', 'true', 'yes', 'on'}
 
