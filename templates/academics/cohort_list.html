@@ -14,11 +14,13 @@
                 {{ cohorts.count }} groupe(s) actif(s)
             </p>
         </div>
+        {% if request.user.is_superuser %}
         <div class="flex gap-2 w-full sm:w-auto">
             <a id="new-cohort-btn" href="/admin/academics/cohort/add/" class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-3 sm:px-4 py-2 rounded-lg flex items-center justify-center gap-2 transition shadow-sm text-sm sm:text-base" title="Alt + A">
                 <span>+</span> Nouveau Groupe
             </a>
         </div>
+        {% endif %}
     </div>
 
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
