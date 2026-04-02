@@ -8,7 +8,7 @@ from decimal import Decimal
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum, Value, DecimalField
 from django.db.models.functions import Coalesce
-from django.http import HttpResponse
+from django.http import Http404, HttpResponse
 from django.views.decorators.http import require_http_methods
 
 from .sync import SyncManager
@@ -25,6 +25,27 @@ from academics.models import Cohort, CourseSession
 from core.models import AcademicYear
 from finance.models import Payment, TeacherCohortPayment
 from students.models import Enrollment, Student, Attendance
+
+
+def _accessible_cohorts_for_user(user):
+    """Return cohorts visible to current user (superuser: all)."""
+    if not user.is_authenticated:
+        return Cohort.objects.none()
+    if user.is_superuser:
+        return Cohort.objects.all()
+    if user.is_teacher:
+        return Cohort.objects.filter(
+            Q(teacher=user)
+            | Q(substitute_teacher=user)
+            | Q(substitute_teachers=user)
+            | Q(sessions__teacher=user)
+        ).distinct()
+    return Cohort.objects.none()
+
+
+def _require_superuser(request):
+    if not request.user.is_superuser:
+        raise Http404("Not found")
 
 
 def _logo_path():
@@ -140,7 +161,7 @@ def _build_pdf_response(filename: str, title: str, story_builder, pagesize=A4):
 @login_required
 def select_cohort(request):
     """Vue principale qui propose les exports PDF globaux et par groupe."""
-    cohorts = Cohort.objects.select_related('teacher', 'subject', 'academic_year').order_by('-academic_year__start_date', 'name')
+    cohorts = _accessible_cohorts_for_user(request.user).select_related('teacher', 'subject', 'academic_year').order_by('-academic_year__start_date', 'name')
     current_year = AcademicYear.get_current()
     return render(request, 'documents/select_cohort.html', {
         'cohorts': cohorts,
@@ -151,6 +172,7 @@ def select_cohort(request):
 @login_required
 def global_reports(request):
     """Rapport global PDF (année académique courante) : étudiants, encaissements, paiements profs."""
+    _require_superuser(request)
     current_year = AcademicYear.get_current()
     if not current_year:
         return HttpResponse("Aucune année académique active (is_current=True).", status=400)
@@ -276,7 +298,10 @@ def global_reports(request):
 @login_required
 def cohort_report(request, cohort_id):
     """Rapport PDF détaillé pour un cohort : fiche, étudiants (paiements), paie prof."""
-    cohort = get_object_or_404(Cohort.objects.select_related('teacher', 'subject', 'level', 'academic_year'), id=cohort_id)
+    cohort = get_object_or_404(
+        _accessible_cohorts_for_user(request.user).select_related('teacher', 'subject', 'level', 'academic_year'),
+        id=cohort_id,
+    )
 
     enrollments = (
         cohort.enrollments.select_related('student', 'tariff')
@@ -392,7 +417,7 @@ def cohort_report(request, cohort_id):
 @login_required
 def download_cohort_attendance(request, cohort_id):
     """Liste de présence (statuts) en PDF pour un cohort."""
-    cohort = get_object_or_404(Cohort, id=cohort_id)
+    cohort = get_object_or_404(_accessible_cohorts_for_user(request.user), id=cohort_id)
     enrollments = cohort.enrollments.select_related('student').order_by('student__last_name')
     sessions = cohort.sessions.order_by('date', 'start_time')
 
@@ -447,7 +472,12 @@ def download_cohort_attendance(request, cohort_id):
 @login_required
 def download_session_attendance(request, session_id):
     """Liste de présence pour une séance (PDF)."""
-    session = get_object_or_404(CourseSession.objects.select_related('cohort', 'teacher'), id=session_id)
+    session = get_object_or_404(
+        CourseSession.objects.select_related('cohort', 'teacher').filter(
+            cohort__in=_accessible_cohorts_for_user(request.user)
+        ),
+        id=session_id,
+    )
     enrollments = session.cohort.enrollments.select_related('student').order_by('student__last_name')
 
     from students.models import Attendance
@@ -557,7 +587,10 @@ def _generate_pdf_bytes(title: str, build_story, pagesize=None, header_footer=No
 @login_required
 def download_cohort_zip(request, cohort_id):
     """ZIP d'un cohort : contient rapport + présences."""
-    cohort = get_object_or_404(Cohort.objects.select_related('teacher', 'subject', 'level', 'academic_year'), id=cohort_id)
+    cohort = get_object_or_404(
+        _accessible_cohorts_for_user(request.user).select_related('teacher', 'subject', 'level', 'academic_year'),
+        id=cohort_id,
+    )
 
     zip_buffer = BytesIO()
     with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
@@ -684,6 +717,7 @@ def download_cohort_zip(request, cohort_id):
 @login_required
 def download_all_cohorts_zip(request):
     """ZIP global institut : tous les cohorts + rapport global organisés par année."""
+    _require_superuser(request)
     current_year = AcademicYear.get_current()
     if not current_year:
         return HttpResponse("Aucune année académique active (is_current=True).", status=400)
@@ -864,7 +898,7 @@ def export_sync_csv(request, cohort_id, data_type='attendance'):
     Exporte un CSV de sync (presences ou paiements).
     Le prof télécharge ce fichier, le modifie hors-ligne, puis le réupload.
     """
-    cohort = get_object_or_404(Cohort, id=cohort_id)
+    raise Http404("Not found")
     
     if data_type == 'attendance':
         csv_content = SyncManager.export_attendance_sync_csv(cohort_id)
@@ -887,8 +921,7 @@ def import_sync_csv(request, cohort_id, data_type='attendance'):
     Importe et merge un CSV de sync.
     Résout les conflits automatiquement par timestamps.
     """
-    if 'sync_file' not in request.FILES:
-        return HttpResponse("Pas de fichier reçu.", status=400)
+    raise Http404("Not found")
     
     uploaded_file = request.FILES['sync_file']
     csv_content = uploaded_file.read().decode('utf-8')
@@ -917,27 +950,19 @@ def import_sync_csv(request, cohort_id, data_type='attendance'):
 @login_required
 def sync_page(request):
     """Page dédiée à la synchronisation globale"""
-    return render(request, 'documents/sync_page.html')
+    raise Http404("Not found")
 
 
 @login_required
 def sync_history(request):
     """Historique des synchronisations"""
-    from .models import SyncLog
-    logs = SyncLog.objects.all()[:20]  # Derniers 20 imports
-    return render(request, 'documents/sync_history.html', {'logs': logs})
+    raise Http404("Not found")
 
 
 @login_required
 def sync_detail(request, sync_id):
     """Détails d'une synchronisation"""
-    from .models import SyncLog
-    try:
-        log = SyncLog.objects.get(id=sync_id)
-    except SyncLog.DoesNotExist:
-        return HttpResponse("Synchronisation non trouvée", status=404)
-    
-    return render(request, 'documents/sync_detail.html', {'log': log})
+    raise Http404("Not found")
 
 
 @login_required
@@ -947,16 +972,7 @@ def export_global_sync(request):
     - presences.csv (toutes les présences de tous les cohortes)
     - paiements.csv (tous les paiements de tous les cohortes)
     """
-    from .sync import GlobalSyncManager
-    
-    zip_buffer, filename = GlobalSyncManager.export_global_sync_zip()
-    
-    if not zip_buffer:
-        return HttpResponse("Aucune année académique courante trouvée.", status=404)
-    
-    response = HttpResponse(zip_buffer.read(), content_type='application/zip')
-    response['Content-Disposition'] = f'attachment; filename="{filename}"'
-    return response
+    raise Http404("Not found")
 
 
 @login_required
@@ -967,70 +983,20 @@ def import_global_sync(request):
     Résout les conflits automatiquement par timestamps (last-write-wins).
     SAUVEGARDE AUTOMATIQUE avant import.
     """
-    import json
-    from .sync import GlobalSyncManager
-    from .models import SyncLog
-    
-    if 'sync_file' not in request.FILES:
-        return HttpResponse(json.dumps({
-            'status': 'error',
-            'message': 'Aucun fichier reçu.'
-        }), content_type='application/json', status=400)
-    
-    uploaded_file = request.FILES['sync_file']
-    
-    try:
-        stats = GlobalSyncManager.import_global_sync_zip(uploaded_file)
-        
-        # Créer le SyncLog
-        sync_log = SyncLog.objects.create(
-            user=request.user,
-            stats_json=stats,
-            error_count=len(stats.get('errors', [])),
-            errors_json=stats.get('errors', [])
-        )
-        
-        return HttpResponse(json.dumps({
-            'success': True,
-            'sync_log_id': sync_log.id,
-            'subjects_added': stats['subjects_added'],
-            'subjects_updated': stats['subjects_updated'],
-            'levels_added': stats['levels_added'],
-            'levels_updated': stats['levels_updated'],
-            'tariffs_added': stats['tariffs_added'],
-            'tariffs_updated': stats['tariffs_updated'],
-            'discounts_added': stats['discounts_added'],
-            'discounts_updated': stats['discounts_updated'],
-            'students_added': stats['students_added'],
-            'students_updated': stats['students_updated'],
-            'cohorts_added': stats['cohorts_added'],
-            'cohorts_updated': stats['cohorts_updated'],
-            'sessions_added': stats['sessions_added'],
-            'sessions_updated': stats['sessions_updated'],
-            'sessions_deleted': stats.get('sessions_deleted', 0),
-            'enrollments_added': stats['enrollments_added'],
-            'enrollments_updated': stats['enrollments_updated'],
-            'enrollments_deleted': stats.get('enrollments_deleted', 0),
-            'presences_added': stats['presences_added'],
-            'presences_updated': stats['presences_updated'],
-            'paiements_etudiants_added': stats['paiements_etudiants_added'],
-            'paiements_etudiants_updated': stats['paiements_etudiants_updated'],
-            'paiements_profs_added': stats['paiements_profs_added'],
-            'paiements_profs_updated': stats['paiements_profs_updated'],
-            'errors': stats['errors']
-        }), content_type='application/json')
-    
-    except Exception as e:
-        return HttpResponse(json.dumps({
-            'success': False,
-            'error': str(e)
-        }), content_type='application/json', status=500)
+    raise Http404("Not found")
 
 
 @login_required
 def download_student_complete_pdf(request, student_id):
     """Dossier complet d'un étudiant en UN SEUL PDF avec TOUTES les informations."""
     student = get_object_or_404(Student, id=student_id)
+    if not request.user.is_superuser:
+        allowed = Enrollment.objects.filter(
+            student=student,
+            cohort__in=_accessible_cohorts_for_user(request.user),
+        ).exists()
+        if not allowed:
+            raise Http404("Not found")
     
     # Récupérer toutes les données
     enrollments = Enrollment.objects.filter(student=student).select_related(
@@ -1220,8 +1186,8 @@ def download_cohort_complete_zip(request, cohort_id):
     from reportlab.lib.enums import TA_CENTER, TA_LEFT
     
     cohort = get_object_or_404(
-        Cohort.objects.select_related('teacher', 'subject', 'level', 'academic_year'),
-        id=cohort_id
+        _accessible_cohorts_for_user(request.user).select_related('teacher', 'subject', 'level', 'academic_year'),
+        id=cohort_id,
     )
     
     enrollments = cohort.enrollments.select_related('student', 'tariff').prefetch_related('payments').order_by('student__last_name')
@@ -1715,8 +1681,8 @@ def download_cohort_payment_report(request, cohort_id):
     2. Bilan des paiements professeur (détails complets)
     """
     cohort = get_object_or_404(
-        Cohort.objects.select_related('teacher', 'subject', 'level', 'academic_year'),
-        id=cohort_id
+        _accessible_cohorts_for_user(request.user).select_related('teacher', 'subject', 'level', 'academic_year'),
+        id=cohort_id,
     )
     
     enrollments = cohort.enrollments.select_related('student', 'tariff').prefetch_related('payments').order_by('student__last_name', 'student__first_name')
@@ -1851,6 +1817,7 @@ def download_all_cohorts_payment_report(request):
     - 01_Paiements_Etudiants.pdf
     - 02_Paiements_Professeur.pdf
     """
+    _require_superuser(request)
     all_cohorts = Cohort.objects.select_related('teacher', 'subject', 'level', 'academic_year').all()
     
     zip_buffer = BytesIO()
@@ -1988,6 +1955,7 @@ def download_all_cohorts_payment_report(request):
 @login_required
 def teachers_list(request):
     """Liste tous les profs (Users avec is_teacher=True) avec lien de téléchargement."""
+    _require_superuser(request)
     from core.models import User
     
     teachers = User.objects.filter(is_teacher=True).order_by('first_name', 'last_name')
@@ -2001,6 +1969,7 @@ def teachers_list(request):
 @login_required
 def download_teacher_document(request, teacher_id):
     """Télécharge le document complet d'un prof avec tous ses groupes et étudiants."""
+    _require_superuser(request)
     from core.models import User
     
     teacher = get_object_or_404(User, id=teacher_id, is_teacher=True)

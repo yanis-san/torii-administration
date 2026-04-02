@@ -4,55 +4,7 @@
 {% block title %}Rapports PDF{% endblock %}
 
 {% block content %}
-<div class="space-y-6" x-data="{
-    csrfToken: '{{ csrf_token }}',
-    globalImportUrl: '{% url "documents:import_global_sync" %}',
-    statusKind: '',
-    statusMessage: '',
-    openDropdown: null,
-    postFile(url, file) {
-        const formData = new FormData();
-        formData.append('sync_file', file);
-        return fetch(url, {
-            method: 'POST',
-            body: formData,
-            headers: { 'X-CSRFToken': this.csrfToken }
-        }).then((response) => response.json());
-    },
-    setGlobalStatus(kind, message) {
-        this.statusKind = kind;
-        this.statusMessage = message;
-    },
-    async uploadGlobalSync(file) {
-        if (!file || !this.globalImportUrl) {
-            return;
-        }
-        this.setGlobalStatus('loading', 'Synchronisation en cours...');
-        try {
-            const data = await this.postFile(this.globalImportUrl, file);
-            if (data.status === 'success') {
-                this.setGlobalStatus('success', '✅ ' + String(data.message || '').replace(/\n/g, ' | '));
-                window.setTimeout(() => window.location.reload(), 3000);
-                return;
-            }
-            this.setGlobalStatus('error', '❌ ' + (data.message || 'Echec de synchronisation'));
-        } catch (error) {
-            this.setGlobalStatus('error', '❌ Erreur reseau: ' + error.message);
-        }
-    },
-    async uploadSync(file, cohortId, syncType) {
-        if (!file || !cohortId || !syncType) {
-            return;
-        }
-        try {
-            const data = await this.postFile('/documents/sync/import/' + cohortId + '/' + syncType + '/', file);
-            window.alert('✅ ' + (data.message || 'Synchronisation terminee'));
-            window.location.reload();
-        } catch (error) {
-            window.alert('❌ Erreur : ' + error);
-        }
-    }
-}" @click="openDropdown = null">
+<div class="space-y-6">
 
     <div class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-6 rounded-xl shadow-lg">
         <h1 class="text-2xl font-bold">Rapports PDF & ZIP</h1>
@@ -61,51 +13,8 @@
         </p>
     </div>
 
-    <!-- SYNCHRONISATION GLOBALE -->
-    <div class="bg-gradient-to-r from-blue-50 to-cyan-50 border-2 border-blue-300 rounded-xl overflow-hidden">
-        <div class="bg-gradient-to-r from-blue-600 to-cyan-600 px-6 py-3">
-            <h2 class="text-lg font-bold text-white flex items-center gap-2">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                </svg>
-                🔄 SYNCHRONISATION GLOBALE
-            </h2>
-        </div>
-        <div class="p-6 space-y-4">
-            <p class="text-sm text-gray-700">
-                <strong>🚀 Solution rapide pour 2 PCs :</strong> Export tout depuis PC1, Import tout sur PC2.
-                <br/> <em>Synchronise TOUTES les présences + paiements automatiquement (sans perte de données).</em>
-            </p>
-            
-            <div class="flex flex-wrap gap-3">
-                <!-- BOUTON EXPORT -->
-                {% if current_year %}
-                <a href="{% url 'documents:export_global_sync' %}"
-                   class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition shadow-md">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
-                    </svg>
-                    📥 Export Global (PC1)
-                </a>
-                {% endif %}
-                
-                <!-- BOUTON IMPORT -->
-                <button id="global-sync-upload-button" type="button"
-                    @click.stop="$refs.globalSyncFileInput.click()"
-                        class="inline-flex items-center gap-2 bg-cyan-600 hover:bg-cyan-700 text-white px-6 py-3 rounded-lg font-semibold transition shadow-md">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
-                    </svg>
-                    📤 Import & Sync (PC2)
-                </button>
-                <input type="file" id="globalSyncFileInput" x-ref="globalSyncFileInput" @change="uploadGlobalSync($event.target.files[0])" accept=".zip" class="hidden">
-            </div>
-            
-            <div id="globalSyncStatus" x-show="statusMessage" :class="statusKind === 'loading' ? 'text-sm text-blue-600 font-semibold' : (statusKind === 'success' ? 'text-sm text-green-600 font-semibold' : 'text-sm text-red-600 font-semibold')" x-text="statusMessage"></div>
-        </div>
-    </div>
-
     <!-- ZIP GLOBAL INSTITUT -->
+    {% if request.user.is_superuser %}
     <div class="bg-gradient-to-r from-emerald-50 to-green-50 border-2 border-emerald-300 rounded-xl overflow-hidden">
         <div class="bg-gradient-to-r from-emerald-600 to-green-600 px-6 py-3">
             <h2 class="text-lg font-bold text-white flex items-center gap-2">
@@ -128,8 +37,10 @@
             {% endif %}
         </div>
     </div>
+    {% endif %}
 
     <!-- RAPPORT GLOBAL -->
+    {% if request.user.is_superuser %}
     <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 space-y-4">
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
             <div>
@@ -146,6 +57,7 @@
             {% endif %}
         </div>
     </div>
+    {% endif %}
 
     <!-- RAPPORTS PAR COHORT -->
     <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
@@ -205,30 +117,6 @@
                                 </svg>
                                 ZIP
                             </a>
-                            
-                            <!-- Sync -->
-                            <div class="dropdown relative md:ml-auto" @click.stop>
-                                <button type="button" @click="openDropdown = (openDropdown === '{{ cohort.id }}' ? null : '{{ cohort.id }}')" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded-lg font-medium text-sm transition shadow-sm">
-                                    ⟲ Sync
-                                </button>
-                                <div class="dropdown-menu absolute bg-white border border-gray-300 rounded-lg shadow-lg z-10 right-0 mt-1 w-48 transition-opacity duration-200" x-show="openDropdown === '{{ cohort.id }}'">
-                                    <a href="{% url 'documents:export_sync_csv' cohort.id 'attendance' %}" class="block px-4 py-2 text-sm hover:bg-gray-100">
-                                        📥 Export Presences (CSV)
-                                    </a>
-                                    <button type="button" @click="$refs.attInput{{ cohort.id }}.click()" class="open-sync-input block w-full text-left px-4 py-2 text-sm hover:bg-gray-100">
-                                        📤 Import Presences (CSV)
-                                    </button>
-                                    <input type="file" id="import-att-{{ cohort.id }}" x-ref="attInput{{ cohort.id }}" accept=".csv" class="hidden sync-import-input" @change="uploadSync($event.target.files[0], '{{ cohort.id }}', 'attendance')">
-                                    <hr/>
-                                    <a href="{% url 'documents:export_sync_csv' cohort.id 'payments' %}" class="block px-4 py-2 text-sm hover:bg-gray-100">
-                                        📥 Export Paiements (CSV)
-                                    </a>
-                                    <button type="button" @click="$refs.payInput{{ cohort.id }}.click()" class="open-sync-input block w-full text-left px-4 py-2 text-sm hover:bg-gray-100">
-                                        📤 Import Paiements (CSV)
-                                    </button>
-                                    <input type="file" id="import-pay-{{ cohort.id }}" x-ref="payInput{{ cohort.id }}" accept=".csv" class="hidden sync-import-input" @change="uploadSync($event.target.files[0], '{{ cohort.id }}', 'payments')">
-                                </div>
-                            </div>
                         </div>
                     </div>
                 </div>
