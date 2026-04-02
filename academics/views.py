@@ -1,6 +1,7 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import HttpResponse
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from students.models import Enrollment, Attendance
 from .models import Cohort, CourseSession
 from datetime import datetime, date, timedelta
@@ -8,11 +9,29 @@ from django.db.models import Count, Q
 from core.models import AcademicYear, User
 
 
+def _accessible_cohorts_for_user(user):
+    """Return cohorts a user is allowed to access."""
+    base_qs = Cohort.objects.all()
+    if not user.is_authenticated:
+        return base_qs.none()
+    if user.is_superuser:
+        return base_qs
+    if user.is_teacher:
+        return base_qs.filter(
+            Q(teacher=user)
+            | Q(substitute_teacher=user)
+            | Q(substitute_teachers=user)
+            | Q(sessions__teacher=user)
+        ).distinct()
+    return base_qs.none()
+
+
+@login_required
 def cohort_list(request):
     """
     Liste de tous les groupes (cohortes) avec filtres.
     """
-    cohorts = Cohort.objects.select_related(
+    cohorts = _accessible_cohorts_for_user(request.user).select_related(
         'subject', 'level', 'teacher', 'academic_year'
     ).prefetch_related('enrollments').annotate(
         remaining=Count('sessions', filter=Q(sessions__status__in=['SCHEDULED', 'POSTPONED']))
@@ -61,11 +80,12 @@ def cohort_list(request):
     return render(request, 'academics/cohort_list.html', context)
 
 
+@login_required
 def cohort_detail(request, pk):
     """
     Page de détail d'un groupe avec le calendrier complet des séances.
     """
-    cohort = get_object_or_404(Cohort, pk=pk)
+    cohort = get_object_or_404(_accessible_cohorts_for_user(request.user), pk=pk)
 
     # Formulaire léger pour configurer le mode Ramadan sans passer par l'admin
     if request.method == 'POST':
@@ -117,13 +137,14 @@ def cohort_detail(request, pk):
     return render(request, 'academics/cohort_detail.html', context)
 
 
+@login_required
 def generate_sessions(request, pk):
     """
     Vue HTMX pour déclencher la génération automatique des séances.
     Met à jour le flag schedule_generated=True, ce qui déclenche le Signal.
     """
     if request.method == 'POST':
-        cohort = get_object_or_404(Cohort, pk=pk)
+        cohort = get_object_or_404(_accessible_cohorts_for_user(request.user), pk=pk)
         # 1) Vérifier qu'il y a bien des créneaux hebdomadaires
         schedules = list(cohort.weekly_schedules.all())
         if not schedules:
@@ -181,12 +202,13 @@ def generate_sessions(request, pk):
     return HttpResponse(status=405)  # Method Not Allowed
 
 
+@login_required
 def finish_cohort(request, pk):
     """Supprime les séances non terminées et fixe la date de fin à aujourd'hui."""
     if request.method != 'POST':
         return HttpResponse(status=405)
 
-    cohort = get_object_or_404(Cohort, pk=pk)
+    cohort = get_object_or_404(_accessible_cohorts_for_user(request.user), pk=pk)
 
     pending_qs = cohort.sessions.filter(status__in=['SCHEDULED', 'POSTPONED'])
     deleted_count = pending_qs.count()
@@ -205,6 +227,7 @@ def finish_cohort(request, pk):
     return redirect('academics:detail', pk=cohort.id)
 
 
+@login_required
 def session_detail(request, session_id):
     """
     Page de gestion de la présence (Faire l'appel).
@@ -215,6 +238,8 @@ def session_detail(request, session_id):
         CourseSession.objects.select_related('cohort', 'teacher', 'classroom'),
         id=session_id
     )
+    if not _accessible_cohorts_for_user(request.user).filter(pk=session.cohort_id).exists():
+        return HttpResponse(status=404)
 
     # Récupérer toutes les inscriptions actives du groupe
     enrollments = session.cohort.enrollments.filter(is_active=True).select_related('student')
@@ -346,6 +371,7 @@ def session_detail(request, session_id):
     return render(request, 'academics/session_detail.html', context)
 
 
+@login_required
 def postpone_session(request, session_id):
     """
     Marque une séance comme reportée (POSTPONED).
@@ -354,7 +380,10 @@ def postpone_session(request, session_id):
     if request.method != 'POST':
         return HttpResponse(status=405)
 
-    session = get_object_or_404(CourseSession, id=session_id)
+    session = get_object_or_404(
+        CourseSession.objects.filter(cohort__in=_accessible_cohorts_for_user(request.user)),
+        id=session_id,
+    )
 
     # Si déjà annulée ou reportée, on évite les doublons
     if session.status in ['POSTPONED', 'CANCELLED']:
@@ -369,6 +398,7 @@ def postpone_session(request, session_id):
     return redirect('academics:detail', pk=session.cohort.id)
 
 
+@login_required
 def cancel_postpone(request, session_id):
     """
     Annule le report d'une séance : remet en SCHEDULED et supprime le rattrapage créé.
@@ -376,7 +406,10 @@ def cancel_postpone(request, session_id):
     if request.method != 'POST':
         return HttpResponse(status=405)
 
-    session = get_object_or_404(CourseSession, id=session_id)
+    session = get_object_or_404(
+        CourseSession.objects.filter(cohort__in=_accessible_cohorts_for_user(request.user)),
+        id=session_id,
+    )
 
     if session.status != 'POSTPONED':
         messages.warning(request, "Cette séance n'est pas reportée.")
@@ -404,6 +437,7 @@ def cancel_postpone(request, session_id):
     return redirect('academics:detail', pk=session.cohort.id)
 
 
+@login_required
 def change_session_teacher(request, session_id):
     """
     Permet de changer le professeur d'une séance spécifique.
@@ -413,7 +447,9 @@ def change_session_teacher(request, session_id):
     from core.models import User
     
     session = get_object_or_404(
-        CourseSession.objects.select_related('cohort', 'teacher', 'classroom'),
+        CourseSession.objects.select_related('cohort', 'teacher', 'classroom').filter(
+            cohort__in=_accessible_cohorts_for_user(request.user)
+        ),
         id=session_id
     )
     
@@ -452,6 +488,7 @@ def change_session_teacher(request, session_id):
     return render(request, 'academics/change_session_teacher.html', context)
 
 
+@login_required
 def add_session_manual(request, cohort_id):
     """
     Ajouter une séance manuellement via formulaire.
@@ -462,7 +499,7 @@ def add_session_manual(request, cohort_id):
     from .forms import CourseSessionForm
     from datetime import datetime
     
-    cohort = get_object_or_404(Cohort, pk=cohort_id)
+    cohort = get_object_or_404(_accessible_cohorts_for_user(request.user), pk=cohort_id)
     next_scheduled = None
     
     if request.method == 'POST':

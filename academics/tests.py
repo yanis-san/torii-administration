@@ -241,6 +241,34 @@ class AcademicsViewsTest(TestCase):
 
         print(f"   OK Liste chargee avec {cohorts.count()} groupe(s)")
 
+    def test_01b_teacher_only_sees_linked_cohorts(self):
+        """Un prof ne doit voir que ses groupes liés dans la liste."""
+        other_teacher = User.objects.create_user(
+            username="teacher_other",
+            password="test123",
+            is_teacher=True,
+            birth_date=date(1987, 6, 20),
+        )
+        other_cohort = Cohort.objects.create(
+            name="Physique Terminale",
+            subject=self.subject,
+            level=self.level,
+            teacher=other_teacher,
+            academic_year=self.ay,
+            start_date=date(2024, 1, 1),
+            end_date=date(2024, 3, 31),
+            teacher_hourly_rate=2500,
+        )
+
+        self.client.login(username='teacher', password='test123')
+        from django.urls import reverse
+        response = self.client.get(reverse('academics:list'), {'year': str(self.ay.id)})
+
+        self.assertEqual(response.status_code, 200)
+        cohorts = response.context['cohorts']
+        self.assertIn(self.cohort, cohorts)
+        self.assertNotIn(other_cohort, cohorts)
+
     def test_02_cohort_detail_view(self):
         """Test la vue détail d'un groupe"""
         print("\n[TEST] Test 2: Vue détail d'un groupe")
