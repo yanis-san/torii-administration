@@ -7,7 +7,7 @@ from core.views import dashboard, login_view, logout_view, signup_view, academic
 from students.views import create_enrollment
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path(f'{settings.DJANGO_ADMIN_UUID}/', admin.site.urls),
     path('login/', login_view, name='login'),
     path('logout/', logout_view, name='logout'),
     path('signup/', signup_view, name='signup'),

@@ -36,6 +36,9 @@ load_dotenv(BASE_DIR / ".env")
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-$g*3j_mhpm*0uf^rt+)g8eh&2cxp2dh75+94^)c$_+#3lh%7dx')
 
+# Admin URL prefix (can be overridden in production via env var).
+DJANGO_ADMIN_UUID = os.getenv('DJANGO_ADMIN_UUID', 'admin').strip('/') or 'admin'
+
 # Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',

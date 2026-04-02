@@ -1,7 +1,11 @@
 from .base import *
 import os
+from django.core.exceptions import ImproperlyConfigured
 
 DEBUG = False
+
+if not os.getenv('DJANGO_ADMIN_UUID', '').strip():
+    raise ImproperlyConfigured('DJANGO_ADMIN_UUID must be set in production environment variables.')
 
 ALLOWED_HOSTS = [h.strip() for h in os.getenv('ALLOWED_HOSTS', '').split(',') if h.strip()]
 
