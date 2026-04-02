@@ -6,7 +6,7 @@ import zipfile
 from django.conf import settings
 from decimal import Decimal
 from django.contrib.auth.decorators import login_required
-from django.db.models import Sum, Value, DecimalField
+from django.db.models import Sum, Value, DecimalField, Q
 from django.db.models.functions import Coalesce
 from django.http import Http404, HttpResponse
 from django.views.decorators.http import require_http_methods
