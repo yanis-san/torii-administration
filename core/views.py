@@ -2,7 +2,7 @@
 from django.shortcuts import render, redirect
 from django.utils import timezone
 from django.db.models import Sum, Q
-from academics.models import CourseSession, Cohort
+from academics.models import CourseSession, Cohort, Subject
 from students.models import Enrollment, StudentAnnualFee
 from finance.models import Payment
 from django.contrib.auth.decorators import login_required
@@ -15,7 +15,7 @@ import threading
 import json
 import time
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta
 from .schedule_generator import generate_schedule_pdf
 
 @login_required
@@ -155,9 +155,6 @@ def dashboard(request):
                 selected_year = current_year
 
         # Calcul des revenus selon le filtre
-        from django.db.models import Q
-        from datetime import datetime, timedelta
-        from academics.models import Subject
 
         # Revenus par année académique
         academic_year_income = 0
